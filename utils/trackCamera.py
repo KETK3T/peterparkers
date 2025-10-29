@@ -1,7 +1,7 @@
 from ultralytics import YOLO
 import cv2
 
-model = YOLO('yolo11n.pt')
+model = YOLO('models/yolo11n.pt')
 
 cap = cv2.VideoCapture(0)
 if not cap.isOpened():
@@ -13,7 +13,7 @@ while True:
         break
 
 
-    results = model.predict(source=frame, show=False, device=0)
+    results = model.predict(source=frame, show=False, device=0, classes=[0], conf=0.80)
 
     annotated_frame = results[0].plot()
     cv2.imshow("Yolo Live", annotated_frame)
