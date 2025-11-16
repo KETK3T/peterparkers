@@ -1,26 +1,34 @@
+'''
+!!! UNDER CONSTRUCTION !!! Nothing works in this file.
+
+'''
+
+
+
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 import time
 import matplotlib.ticker as ticker
 
-import icm20x_icm20948_simpletest as ist
+import imu-sensor-data as isd 
+import gps-sensor-data as gsd
 
-imu = ist.icm
+imu = isd.icm
+gps = gsd.msg
 
-#x=time,y1=x-direction,y2=y-direction
+#x=time,y1=x-direction,y2=y-direction,y3=z-direction
 
 # Create figure and axes
-#fig, ax = plt.subplots()
-fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 4)) # 1 row, 3 columns
+fig, ax = plt.subplots()
+#fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(15, 4)) # n row, m columns
 #3 graphs side by side
-x_data, y1_data, y2_data = [], [], []
-line1, = axes[0].plot(x_data, y1_data, label='X Direction') 
-line2, = axes[0].plot(x_data, y2_data, label='Y Direction') 
-line3, = axes[1].plot(x_data, y2_data, label='Y Direction') 
-line4, = axes[1].plot(x_data, y1_data, label='X Direction')
-line5, = axes[2].plot(x_data, y2_data, label='Y Direction')
-line6, = axes[2].plot(x_data, y2_data, label='Y Direction')
+x_data, y1_data, y2_data, y3_data = [], [], [], []
+
+line1, = ax.plot(x_data, 0, label='Zero Line') 
+line2, = ax.plot(x_data, y1_data, label='X Direction') 
+line3, = ax.plot(x_data, y2_data, label='Y Direction')
+line4, = ax.plot(x_data, y3_data, label='Z Direction')
 
 
 start_time = time.time() #seconds
@@ -35,10 +43,6 @@ def update(frame):
     '''
     new_y1 = np.random.randint(-10,10) # Generate random y-value; ax
     new_y2 = np.random.randint(-10,10) #ay
-    new_y1v = np.random.randint(-10,10) #vx
-    new_y2v = np.random.randint(-10,10) #vy
-    new_y1s = np.random.randint(-10,10) #sx
-    new_y2s = np.random.randint(-10,10) #sy
     '''
 
     #ax,ay = icm.acceleration[:2]
@@ -79,7 +83,7 @@ def update(frame):
     axes[0].xaxis.set_major_locator(ticker.MultipleLocator(5))
     axes[0].xaxis.set_minor_locator(ticker.MultipleLocator(0.5))
 
-    return line1, line2, line3, line4, line5, line6
+    return line1, line2, line3, line4
 
 # Create the animation
 ani = animation.FuncAnimation(fig, update, interval=100) # Update every 100ms
