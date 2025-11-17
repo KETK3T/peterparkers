@@ -11,7 +11,7 @@ import numpy as np
 
 
 
-model = YOLO('models/yolo11n.pt')
+model = YOLO('models/yolo11m.pt')
 
 cap = cv2.VideoCapture("tests/IMG_9663.mp4")
 if not cap.isOpened():
@@ -25,10 +25,10 @@ while True:
         break
 
 
-    results = model.track(source=frame,tracker="botsort.yaml", show=False, device=0, conf=0.51, classes=[2,3,5,7])
+    results = model.predict(source=frame, show=False, device=0, conf=0.45, classes=[2,3,5,7])
     annotated_frame = results[0].plot()
     boxes = results[0].boxes.xyxy.cpu().numpy()
-
+    boxes = boxes[np.argsort((boxes[:, 0] + boxes[:, 2]) / 2)]
     # for i, box in enumerate(boxes):
     #     x1,y1,x2,y2 = map(int, box)
     #     print(f"Box {i}:  (x1={x1}, y1={y1}, x2={x2}, y2={y2})")
@@ -97,25 +97,6 @@ while True:
                 # # cv2.rectangle(annotated_frame,(x1A,y2A),(x2B,y2B), (0,25,255), 2)
 
 
-
-            # h_overlap = max(0, min(x2A,x2B) - max(x1A,x1B))
-            # v_overlap = max(0, min(y2A,y2B) - max(y1A,y1B))
-            #
-            # h_gap = max(0, max(x1B - x2A, x1A - x2B))
-            # h_gap = max(0, max(y1B - y2A, y1A - y2B))
-            #
-            # if v_overlap > 0 and 0 < h_overlap < DIST_THRESHOLD:
-            #     left = boxA if x2A < x1B else boxB
-            #     right = boxB if x2A < x1B else boxA
-            #
-            #     x_left = int(left[2])
-            #     x_right = int(right[2])
-            #     y_top = int(max(left[1] , right[1]))
-            #     y_bottom = int(min(left[3], right[3]))
-            #
-            #
-            #     cv2.rectangle(annotated_frame, (x_left,y_top), (x_right, y_bottom),
-            #                   (0,0,255), thickness=-1)
 
     cv2.imshow("Yolo Live", annotated_frame)
 
