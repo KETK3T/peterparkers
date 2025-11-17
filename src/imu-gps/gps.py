@@ -17,19 +17,22 @@ class GPS:
         self.rate = rate_hz
         self.running = True
 
-        self.latitude = None
-        self.longitude = None
-        self.altitude = None
+        self.latitude = 0
+        self.longitude = 0
+        self.altitude = 0 #sometimes returns None
 
         # start background thread
         self.thread = threading.Thread(target=self.update_loop, daemon=True)
         self.thread.start()
 
     def __str__(self):
+        def _fmt(v):
+            return f"{v:.3f}" if isinstance(v, (int, float)) else "N/A"
+
         return (
-            f"Latitude: {self.latitude:.3f}\n"
-            f"Longitude: {self.longitude:.3f}\n"
-            f"Altitude: {self.altitude:.3f}\n"
+            f"Latitude: {_fmt(self.latitude)}\n"
+            f"Longitude: {_fmt(self.longitude)}\n"
+            f"Altitude: {_fmt(self.altitude)}\n"
         )
 
     def update_loop(self):
