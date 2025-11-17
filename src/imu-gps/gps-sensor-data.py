@@ -18,7 +18,9 @@ import pynmea2
 # (e.g., '/dev/ttyUSB0' for a USB-to-serial adapter)
 # Ensure the baudrate matches the device you are communicating with.
 ser = serial.Serial(
-    port='/dev/ttyS0',  # Adjust this for your specific setup
+    port='/dev/ttyTHS1',  # Adjust this for your specific setup
+    #ttyTH2, ttyTHS1. ttyS0
+    #look at jetson nano pinout to determine which port
     baudrate=9600,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,

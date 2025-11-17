@@ -20,29 +20,26 @@ class IMU:
         self.rate = rate_hz
         self.running = True
         
-        self.accel = None # m/s^2
-        self.gyro = None # rad/s
-        self.magnetic = None
+        self.accel = self.sensor.acceleration# m/s^2
+        self.gyro =  self.sensor.gyro #rad/s
+        self.magnetic = self.sensor.magnetic # uT
 
         # start background thread
         self.thread = threading.Thread(target=self.update_loop, daemon=True)
         self.thread.start()
     
     def __str__(self):
-        ax, ay, az = self.accel
-        gx, gy, gz = self.gyro
-        mx, my, mz = self.magnetic
         return (
-            f"Acceleration: X:{ax:.3f}, Y:{ay:.3f}, Z:{az:.3f}\n"
-            f"Gyroscope: X:{gx:.3f}, Y:{gy:.3f}, Z:{gz:.3f}\n"
-            f"Magnetometer: X:{mx:.3f}, Y:{my:.3f}, Z:{mz:.3f}\n"
+            f"Acceleration: X:{self.accel[0]:.3f}, Y:{self.accel[1]:.3f}, Z:{self.accel[2]:.3f} m/s^2\n"
+            f"Gyroscope: X:{self.gyro[0]:.3f}, Y:{self.gyro[1]:.3f}, Z:{self.gyro[2]:.3f} rads/s\n"
+            f"Magnetometer: X:{self.magnetic[0]:.3f}, Y:{self.magnetic[1]:.3f}, Z:{self.magnetic[2]:.3f} uT\n"
         )
 
     def update_loop(self):
         period = 1 / self.rate
         while self.running:
-            self.accel = self.sensor.acceleration()
-            self.gyro = self.sensor.gyro()
+            self.accel = self.sensor.acceleration
+            self.gyro = self.sensor.gyro
             self.magnetic = self.sensor.magnetic
             time.sleep(period)
 
