@@ -19,8 +19,6 @@ import pynmea2
 # Ensure the baudrate matches the device you are communicating with.
 ser = serial.Serial(
     port='/dev/ttyTHS1',  # Adjust this for your specific setup
-    #ttyTH2, ttyTHS1. ttyS0
-    #look at jetson nano pinout to determine which port
     baudrate=9600,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,
@@ -34,7 +32,6 @@ print("Serial port opened. Waiting for data...")
 try:
     while True:
         if ser.in_waiting > 0:
-            #print("Hello")
             # Read data from the serial port
             # ser.readline() reads until a newline character is encountered
             # ser.read(num_bytes) reads a specified number of bytes
@@ -53,8 +50,6 @@ try:
                 print("No data recieved")
         time.sleep(0.1) # Small delay to prevent busy-waiting
 
-except KeyboardInterrupt:
-    print("Program terminated by user.")
 except Exception as e:
     print(f"An error occurred: {e}")
 finally:
