@@ -1,0 +1,75 @@
+import numpy as np
+from filterpy.kalman import ExtendedKalmanFilter
+
+class EKF(ExtendedKalmanFilter):
+    def __init__(self):
+        super().__init__(dim_x=5, dim_z=2)
+
+        # State vector
+        # Contains x, y, vx, vy, and theta
+        # x is position in x direction
+        # y is position in y direction
+        # vx is velocity in x direction
+        # vy is velocity in y direction
+        # theta is heading orientation
+        self.x = np.zeros(5)
+
+        # Covariance (P matrix)
+        self.P = np.eye(5) * 1.0
+
+        # Process noise (Q matrix), this will need to be adjusted to the IMU datasheets
+        self.Q = np.diag([0.1, 0.1, 0.5, 0.5, 0.05])
+
+        # Measurement noise (GPS) (R matrix), this will need to be adjusted to the GPS datasheets
+        self.R = np.diag([3.0, 3.0])
+
+    # Prediction step
+    # dt is change in time, will use timestamps to calculate
+    def predict_f(self, x, dt, ax, ay, gyro_z):
+        x_pos, y_pos, vx, vy, theta = x
+
+        # Rotate acceleration into world frame
+        # Changes coordinates for acceleration from vehicle coordinates to map coordinates
+        # Better corresponds with GPS and state vector
+        a_wx = ax*np.cos(theta) - ay*np.sin(theta)
+        a_wy = ax*np.sin(theta) + ay*np.cos(theta)
+
+        # Predicts using kinematics
+        x_pos += vx*dt + 0.5*a_wx*dt*dt
+        y_pos += vy*dt + 0.5*a_wy*dt*dt
+        vx    += a_wx*dt
+        vy    += a_wy*dt
+        theta += gyro_z*dt
+
+        # Returns updated state vector
+        return np.array([x_pos, y_pos, vx, vy, theta])
+
+    # Calculates the F matrix and its Jacobian
+    def F_jacobian(self, x, dt, ax, ay):
+        _, _, vx, vy, theta = x
+
+        F = np.eye(5)
+        F[0,2] = dt         # dx/dvx
+        F[1,3] = dt         # dy/dvy
+
+        # Derivatives wrt theta (due to acceleration rotation)
+        F[0,4] = (-ax*np.sin(theta) - ay*np.cos(theta)) * dt
+        F[1,4] = ( ax*np.cos(theta) - ay*np.sin(theta)) * dt
+
+        return F
+
+    # ----------------------------------------------------
+    # h(x): Measurement function (GPS)
+    # ----------------------------------------------------
+    def H(self, x):
+        # GPS measures only position
+        return np.array([x[0], x[1]])
+
+    # ----------------------------------------------------
+    # H_jacobian(x): Jacobian of h
+    # ----------------------------------------------------
+    def H_jacobian(self, x):
+        H = np.zeros((2, 5))
+        H[0,0] = 1
+        H[1,1] = 1
+        return H
