@@ -44,7 +44,7 @@ class EKF(ExtendedKalmanFilter):
         # Returns updated state vector
         return np.array([x_pos, y_pos, vx, vy, theta])
 
-    # Calculates the F matrix and its Jacobian
+    # F matrix is Jacobian of motion model
     def F_jacobian(self, x, dt, ax, ay):
         _, _, vx, vy, theta = x
 
@@ -58,16 +58,12 @@ class EKF(ExtendedKalmanFilter):
 
         return F
 
-    # ----------------------------------------------------
-    # h(x): Measurement function (GPS)
-    # ----------------------------------------------------
+    # Measurement function h(x)
     def H(self, x):
         # GPS measures only position
         return np.array([x[0], x[1]])
 
-    # ----------------------------------------------------
-    # H_jacobian(x): Jacobian of h
-    # ----------------------------------------------------
+    # H matrix = Jacobian of measurement model
     def H_jacobian(self, x):
         H = np.zeros((2, 5))
         H[0,0] = 1
