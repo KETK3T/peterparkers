@@ -1,10 +1,12 @@
 import cv2
 from ultralytics import YOLO
 import multiprocessing as mp
+import numpy as np
+import math 
 import time
 
 class proc(mp.Process):
-    def __init__(self,cam_id, name=None, model="models/yolo11n.pt"):
+    def __init__(self,cam_id, name=None, model="models/yolo11n-seg.pt"):
         super().__init__(name=name or f"Camera-{cam_id}")
         self.cam_id = cam_id
         self.model = model
@@ -28,8 +30,47 @@ class proc(mp.Process):
                 print(f"[{self.name}] Failed to get a frame")
                 break
 
-            results = model_instance.predict(source=frame, show=False,device=0, conf=0.75)
+            H = frame.shape[0]
+            crp = int(H*0.25)
+            frame = frame[crp:H,:]
+
+            results = model_instance.predict(source=frame, show=False,device=0, conf=0.25)
+
             annotated_frame = results[0].plot()
+            boxes = results[0].boxes.xyxy.cpu().numpy()
+            boxes = boxes[np.argsort((boxes[:, 0] + boxes[:, 2]) / 2)]
+            for i, box in enumerate(boxes):
+                x1,y1,x2,y2 = map(int,box)
+                print(f"Box {i}:  (x1={x1}, y1={y1}, x2={x2}, y2={y2})")
+
+            n = len(boxes)
+
+            for i in range(n - 1):
+                x1a, y1a, x2a, y2a = map(int, boxes[i])
+                x1b, y1b, x2b, y2b = map(int, boxes[i + 1])
+                len2 = math.dist((x1a, y2a), (x1b, y2b))
+                len1 = math.dist((x2a, y2a), (x2b, y2b))
+
+                mid_x_a = int((x1a + x1b) / 2)
+                mid_x_b = int((x2a + x2b) / 2)
+                mid_y_a = int((y2a + y2b) / 2)
+                mid_y_b = int((y2a + y2b) / 2)
+                label = f"first: {len1: .1f}px"
+                label2 = f"second: {len2: .1f}px"
+
+                a1 = np.array([x1a, y2a])
+                a2 = np.array([x1b, y2b])
+                b1 = np.array([x2a, y2a])
+                b2 = np.array([x2b, y2b])
+
+                line1 = np.array([a1, a2])
+                line2 = np.array([b1, b2])
+                cv2.line(annotated_frame, (x1a, y2a), (x1b, y2b), (0, 0, 255), 2)
+                cv2.line(annotated_frame, (x2a, y2a), (x2b, y2b), (0, 0, 255), 2)
+                cv2.putText(annotated_frame, label, (mid_x_a, mid_y_a),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+                cv2.putText(annotated_frame, label2, (mid_x_b, mid_y_b),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
 
             if not self.frame_queue.empty():
                 try:
@@ -71,6 +112,7 @@ if __name__ == "__main__":
             if f2 is not None:
                 cv2.imshow("Left Cam", f2)
             if f3 is not None:
+
                 cv2.imshow("Right Cam", f3)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
