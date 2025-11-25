@@ -1,0 +1,74 @@
+/* Remove scrollbars and force full-screen fit */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* 🚫 no scrollbars */
+  background-color: white;
+  /* Removed align-content from here as it only works on multi-line flex containers */
+}
+
+/* App container takes full screen height */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Use vh for explicit viewport height */
+  width: 100vw; /* Use vw for explicit viewport width */
+  overflow: hidden; /* Crucial: ensures internal overflow doesn't cause external scroll */
+  /* If you want to center the content horizontally: */
+  align-items: center;
+  /* If you want to center the content vertically (only works if content height is less than 100vh): */
+  justify-content: center;
+}
+
+/* Header styles */
+.app-header {
+  flex-shrink: 0;
+  text-align: center;
+  padding: 1rem 0;
+  font-size : 3rem;
+}
+
+.header-logo {
+  display: flex;
+  justify-content: center;
+
+}
+
+.logo-img {
+  width: 200px;
+  height: 200px;
+  object-fit: cover;
+}
+
+.header-title {
+  font-size: 8rem;
+  font-weight: bolder;
+  color: #1f2937;
+  margin-bottom: 2rem;
+  font-family: Manrope;
+}
+
+.header-nav {
+  display: flex;
+  justify-content: center;
+  gap: 5rem;
+}
+
+.nav-link {
+  color: #2563eb;
+  font-weight: bold;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  font-family: Manrope;
+}
+
+.nav-link:hover {
+  color: #1e40af;
+}
+
+/* Use text-align for h1 if it's an inline element, or align-items/justify-content on its parent */
+h1 {
+    text-align: center;
+}
