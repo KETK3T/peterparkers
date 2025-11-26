@@ -5,24 +5,25 @@ import cv2
 app = Flask(__name__)
 CORS(app)
 
-camera = cv2.VideoCapture(0)
+camera = None
+
+def get_camera():
+    global camera
+    if camera is None:
+        camera = cv2.VideoCapture(0)
+    return camera
 
 
 def generate_frames():
+    cam = get_camera()
     while True:
-        success, frame = camera.read()
+        success, frame = cam.read()
         if not success:
             break
-
-        # Encode to JPEG
         ret, buffer = cv2.imencode('.jpg', frame)
-        frame_bytes = buffer.tobytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
 
-        # This yields an MJPEG frame
-        yield (
-            b'--frame\r\n'
-            b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n'
-        )
 @app.route('/api/users')
 def get_users():
     return {"users": ["Camera running properly!"]}
@@ -36,4 +37,4 @@ def video():
 
 
 if __name__ == '__main__':
-    app.run(debug=True,host='localhost', port=8000)
+    app.run(debug=True,host='localhost', port=8000, use_reloader=False )

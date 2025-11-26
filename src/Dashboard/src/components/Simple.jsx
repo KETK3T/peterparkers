@@ -63,7 +63,7 @@ useEffect(() => {
         <div className="camera-box">
           <div className="camera-label">CAMERA VIEW</div>
               <img
-                src="http://localhost:8000/video"
+                src="http://localhost:8000/video/front"
                 alt="Live Camera"
                 className="camera-feed"
               />

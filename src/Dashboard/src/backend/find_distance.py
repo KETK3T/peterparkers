@@ -1,9 +1,18 @@
+import atexit
 import cv2
 from ultralytics import YOLO
+from flask import Flask, Response
+from flask_cors import CORS
 import multiprocessing as mp
 import numpy as np
 import math 
 import time
+
+
+app = Flask(__name__)
+CORS(app)
+
+
 
 class proc(mp.Process):
     def __init__(self,cam_id, name=None, model="models/yolo11n-seg.pt"):
@@ -91,41 +100,102 @@ class proc(mp.Process):
 
 
 
-if __name__ == "__main__":
-    mp.set_start_method("spawn")
-
-    cam1 = proc(0,model="models/yolo11n.pt",name="Front Cam")
-    cam2 = proc(4,model="models/yolo11n.pt",name="Left Cam")
-    cam3 = proc(8,model="models/yolo11n.pt",name="Right Cam")
-    cam1.start()
-    cam2.start()
-    cam3.start()
-
+def generate_stream(cam):
     try:
         while True:
-            f1 = cam1.get_frame()
-            f2 = cam2.get_frame()
-            f3 = cam3.get_frame()
+            frame = cam.get_frame()
 
-            if f1 is not None:
-                cv2.imshow("Front Cam", f1)
-            if f2 is not None:
-                cv2.imshow("Left Cam", f2)
-            if f3 is not None:
+            if frame is None:
+                continue
+            ret, buffer = cv2.imencode('.jpg',frame)
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+    except GeneratorExit:
+        print("Client disconnected from stream")
+        return
 
-                cv2.imshow("Right Cam", f3)
+@app.route('/video/front')
+def video_front():
+    return Response(
+        generate_stream(cam1),
+        mimetype='multipart/x-mixed-replace; boundary=frame'
+    )
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-    except KeyboardInterrupt:
-        pass
+@app.route('/video/left')
+def video_left():
+    return Response(
+        generate_stream(cam2),
+        mimetype='multipart/x-mixed-replace; boundary=frame'
+    )
 
-    print("Stopping all camera processes")
+@app.route('/video/right')
+def video_right():
+    return Response(
+        generate_stream(cam3),
+        mimetype='multipart/x-mixed-replace; boundary=frame'
+    )
+
+
+
+cam1 = proc(0, model="models/yolo11n.pt", name="Front Cam")
+cam2 = proc(4, model="models/yolo11n.pt", name="Left Cam")
+cam3 = proc(8, model="models/yolo11n.pt", name="Right Cam")
+cam1.start()
+cam2.start()
+cam3.start()
+
+@app.route('/api/users')
+def get_users():
+    return {"users": ["Camera running properly!"]}
+
+if __name__ == "__main__":
+
+    app.run(host='localhost', port=8000, use_reloader=False)
+    mp.set_start_method("spawn")
+    # try:
+    #     while True:
+    #         f1 = cam1.get_frame()
+    #         f2 = cam2.get_frame()
+    #         f3 = cam3.get_frame()
+    #
+    #         if f1 is not None:
+    #             cv2.imshow("Front Cam", f1)
+    #         if f2 is not None:
+    #             cv2.imshow("Left Cam", f2)
+    #         if f3 is not None:
+    #
+    #             cv2.imshow("Right Cam", f3)
+    #
+    #         if cv2.waitKey(1) & 0xFF == ord('q'):
+    #             cam1.stop()
+    #             cam3.stop()
+    #             cam2.stop()
+    #             break
+    # except KeyboardInterrupt:
+    #     cam1.stop()
+    #     cam3.stop()
+    #     cam2.stop()
+    #     pass
+    #
+    # print("Stopping all camera processes")
+    # cam1.stop()
+    # cam3.stop()
+    # cam2.stop()
+    # cam1.join()
+    # cam2.join()
+    # cam3.join()
+    # cv2.destroyAllWindows()
+    # print("Closed all processes")
+
+
+@atexit.register
+def shutdown_cams():
+    print("Shutting down all camera processes")
+
     cam1.stop()
     cam3.stop()
     cam2.stop()
     cam1.join()
     cam2.join()
     cam3.join()
-    cv2.destroyAllWindows()
-    print("Closed all processes")
+    print("All cameras have stopped")
