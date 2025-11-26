@@ -69,3 +69,10 @@ class EKF(ExtendedKalmanFilter):
         H[0,0] = 1
         H[1,1] = 1
         return H
+
+    def __str__(self):
+        return (
+            f"Position: Lat:{self.x[0]:.3f}, Long:{self.x[1]:.3f}\n"
+            f"Velocity: X:{self.x[2]:.3f}, Y:{self.x[3]:.3f} m/s\n"
+            f"Heading: {self.x[4]:.3f} radians\n"
+        )

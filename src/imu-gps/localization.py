@@ -10,6 +10,7 @@ myIMU = IMU()
 myGPS = GPS()
 
 while True:
+    time.sleep(0.5)
     # IMU readings
     ax, ay, az = myIMU.accel
     gyro_x, gyro_y, gyro_z = myIMU.gyro
@@ -54,4 +55,4 @@ while True:
     # position in x and y directions
     # velocity in x and y directions
     # heading in radians
-    print("Estimated state:", ekf.x)
+    print(ekf)

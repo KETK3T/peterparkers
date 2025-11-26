@@ -6,6 +6,7 @@ myimu = IMU()
 mygps = GPS()
 
 while True: #while loop acts as the application loop
-    print(myimu) #subsitute for sending data
+    # substitute for sending data
+    print(myimu)
     print(mygps)
     time.sleep(0.5)

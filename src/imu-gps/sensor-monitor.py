@@ -11,11 +11,11 @@ import numpy as np
 import time
 import matplotlib.ticker as ticker
 
-import imu-sensor-data as isd 
-import gps-sensor-data as gsd
+from imu import IMU
+from gps import GPS
 
-imu = isd.icm
-gps = gsd.msg
+imu = IMU()
+gps = GPS()
 
 #x=time,y1=x-direction,y2=y-direction,y3=z-direction
 
