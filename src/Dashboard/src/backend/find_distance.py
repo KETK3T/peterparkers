@@ -152,41 +152,6 @@ if __name__ == "__main__":
 
     app.run(host='localhost', port=8000, use_reloader=False)
     mp.set_start_method("spawn")
-    # try:
-    #     while True:
-    #         f1 = cam1.get_frame()
-    #         f2 = cam2.get_frame()
-    #         f3 = cam3.get_frame()
-    #
-    #         if f1 is not None:
-    #             cv2.imshow("Front Cam", f1)
-    #         if f2 is not None:
-    #             cv2.imshow("Left Cam", f2)
-    #         if f3 is not None:
-    #
-    #             cv2.imshow("Right Cam", f3)
-    #
-    #         if cv2.waitKey(1) & 0xFF == ord('q'):
-    #             cam1.stop()
-    #             cam3.stop()
-    #             cam2.stop()
-    #             break
-    # except KeyboardInterrupt:
-    #     cam1.stop()
-    #     cam3.stop()
-    #     cam2.stop()
-    #     pass
-    #
-    # print("Stopping all camera processes")
-    # cam1.stop()
-    # cam3.stop()
-    # cam2.stop()
-    # cam1.join()
-    # cam2.join()
-    # cam3.join()
-    # cv2.destroyAllWindows()
-    # print("Closed all processes")
-
 
 @atexit.register
 def shutdown_cams():
