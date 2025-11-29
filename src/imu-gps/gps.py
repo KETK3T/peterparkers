@@ -38,37 +38,36 @@ class GPS:
     def update_loop(self):
         print("Serial port opened. Waiting for data...")
         period = 1 / self.rate
-        try:
-            while self.running:
-                if self.ser.in_waiting > 0:
-                    # Read data from the serial port
-                    # ser.readline() reads until a newline character is encountered
-                    # ser.read(num_bytes) reads a specified number of bytes
-                    data = self.ser.readline().decode().strip()  # Decode and remove whitespace
-                    # 'utf-8'
-                    if data:
-                        if data.find('GGA') > 0:
-                            try:
-                                msg = pynmea2.parse(data)
-                                '''
-                                print(msg.timestamp, 'Lat:', round(msg.latitude, 6), 'Lon:', round(msg.longitude, 6),
-                                      'Alt:', msg.altitude, 'Sats:', msg.num_sats)
-                                '''
-                                # print(f"Received: {data}")
 
-                                self.latitude = round(msg.latitude, 6)
-                                self.longitude = round(msg.longitude, 6)
-                                self.altitude = msg.altitude
+        while self.running:
+            if self.ser.in_waiting > 0:
+                # Read data from the serial port
+                # ser.readline() reads until a newline character is encountered
+                # ser.read(num_bytes) reads a specified number of bytes
+                data = self.ser.readline().decode().strip()  # Decode and remove whitespace
+                # 'utf-8'
 
-                            except Exception as e:
-                                print(e)
+                if data.find('GGA') > 0:
+                    try:
+                        msg = pynmea2.parse(data)
+                        '''
+                        print(msg.timestamp, 'Lat:', round(msg.latitude, 6), 'Lon:', round(msg.longitude, 6),
+                              'Alt:', msg.altitude, 'Sats:', msg.num_sats)
+                        '''
+                        # print(f"Received: {data}")
 
-                    else:
-                        print("No data recieved")
+                        self.latitude = msg.latitude, 6
+                        self.longitude = msg.longitude, 6
+                        self.altitude = msg.altitude
+
+                    except Exception as e:
+                        print(e)
+
+
+
                 time.sleep(period)  # Small delay to prevent busy-waiting
 
-        except Exception as e:
-            print(f"An error occurred: {e}")
+
 
     def get_lat(self):
         return self.latitude
