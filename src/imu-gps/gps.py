@@ -27,7 +27,7 @@ class GPS:
 
     def __str__(self):
         def _fmt(v):
-            return f"{v:.3f}" if isinstance(v, (int, float)) else "N/A"
+            return f"{v:}" if isinstance(v, (int, float)) else "N/A"
 
         return (
             f"Latitude: {_fmt(self.latitude)}\n"
@@ -56,8 +56,8 @@ class GPS:
                         '''
                         # print(f"Received: {data}")
 
-                        self.latitude = msg.latitude, 6
-                        self.longitude = msg.longitude, 6
+                        self.latitude = msg.latitude
+                        self.longitude = msg.longitude
                         self.altitude = msg.altitude
 
                     except Exception as e:
