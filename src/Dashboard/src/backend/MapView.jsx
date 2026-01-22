@@ -63,11 +63,14 @@ return () => {
 
 export default function MapView() {
     return(
-    <MapContainer center = {[32.7292,-97.1152]} zoom = {50} scrollWheelZoom={true}
+    <MapContainer center = {[32.7260083,-97.1125303]} zoom = {17} minZoom= {17} maxZoom= {22} scrollWheelZoom={true}
       style={{ height: '100%', width: '100%' }}>
         <TileLayer
             attribution= '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            url="/tiles/{z}/{x}/{y}.png"
+            minZoom= {17}
+            maxZoom= {22}
+            maxNativeZoom= {22}
         />
         <LocationMarker/>
     </MapContainer>
