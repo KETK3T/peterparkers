@@ -1,3 +1,9 @@
 ~/parker-repo/src/Dashboard/node_modules
 /src/node_modules/
 /src/Dashboard/node_modules
+/.idea/
+/cam0.mp4
+/cam1.mp4
+/cam2.mp4
+/utils/__pycache__/
+/yolo11n.pt
