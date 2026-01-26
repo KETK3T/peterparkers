@@ -88,5 +88,8 @@ class EKF(ExtendedKalmanFilter):
     def load(self):
         self.writer.writerow([self.count,self.x[0],self.x[1],self.x[2],self.x[3],self.x[4]])
         self.count += 1
+
+    def getstate(self):
+        return self.x
     
     

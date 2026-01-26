@@ -13,11 +13,11 @@ import adafruit_icm20x
 #once application closes make sure run myimu.stop() for clean stop
 
 class IMU:
-    def __init__(self, rate_hz=60):
+    def __init__(self):
         
         i2c = board.I2C()
         self.sensor = adafruit_icm20x.ICM20948(i2c)
-        self.rate = rate_hz
+        #self.rate = rate_hz
         self.running = True
         
         self.accel = self.sensor.acceleration# m/s^2
@@ -36,12 +36,12 @@ class IMU:
         )
 
     def update_loop(self):
-        period = 1 / self.rate
+        #period = 1 / self.rate
         while self.running:
             self.accel = self.sensor.acceleration
             self.gyro = self.sensor.gyro
             self.magnetic = self.sensor.magnetic
-            time.sleep(period)
+            #time.sleep(period)
 
     def get_accel(self):
         return self.accel

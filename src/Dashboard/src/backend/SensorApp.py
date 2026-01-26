@@ -1,19 +1,24 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
-#import localization.py class
+
+import sys
+import os
+
+
+path_to_add = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../imu-gps'))
+sys.path.append(path_to_add)
+
+from localization-test import Localization
 
 app = Flask(__name__)
 CORS(app)
 
-# Initialize ONCE
-# this won't work because of while loop
-#localization.run()
+myLocalization = Localization()
 
 
 @app.route("/sensor")
 def get_sensor_state():
-    state = []
-    #state = localization.efk.get_state()
+    state = myLocalization.getstate()
     return jsonify(state)
 
 if __name__ == "__main__":
