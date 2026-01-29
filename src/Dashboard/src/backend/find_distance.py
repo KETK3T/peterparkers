@@ -15,7 +15,7 @@ CORS(app)
 
 
 class proc(mp.Process):
-    def __init__(self,cam_id, name=None, model="models/yolo11n-seg.pt"):
+    def __init__(self,cam_id, name=None, model="models/best.pt"):
         super().__init__(name=name or f"Camera-{cam_id}")
         self.cam_id = cam_id
         self.model = model
@@ -23,9 +23,10 @@ class proc(mp.Process):
         self.frame_queue = mp.Queue(maxsize=1)
     def run(self):
         print(f"[{self.name}] Starting camera {self.cam_id}")
-        cap = cv2.VideoCapture(self.cam_id)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
+        cap = cv2.VideoCapture(self.cam_id,cv2.CAP_V4L2)
+        # cap = cv2.VideoCapture("tests/F_tilted_6_cropped.mov")
+        # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+        # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
         cap.set(cv2.CAP_PROP_FPS, 15)
 
         if not cap.isOpened():
@@ -137,9 +138,9 @@ def video_right():
 
 
 
-cam1 = proc(0, model="models/yolo11n.pt", name="Front Cam")
-cam2 = proc(4, model="models/yolo11n.pt", name="Left Cam")
-cam3 = proc(8, model="models/yolo11n.pt", name="Right Cam")
+cam1 = proc(0, model="models/best.pt", name="Front Cam")
+cam2 = proc(2, model="models/best.pt", name="Left Cam")
+cam3 = proc(6, model="models/best.pt", name="Right Cam")
 cam1.start()
 cam2.start()
 cam3.start()

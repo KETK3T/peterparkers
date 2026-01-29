@@ -49,7 +49,8 @@ def capture(id,src, queue, w=640, h=480):
 
 if __name__ == "__main__":
     queues = [Queue(maxsize=1) for _ in range(3)]
-    sources = [9, 4, 1]
+    sources = [1, 3, 7]
+    # dont forget to change usbc camera frame size
     # model = YOLO("models/yolo11n.pt")
     processes = []
     for i, src in enumerate(sources):
@@ -66,9 +67,9 @@ if __name__ == "__main__":
         if os.path.isfile(fileName):
             os.remove(fileName)
         frameSize = (640,480)
-        if i == 2:
+        if i == 0:
             frameSize = (1280,720)
-        writer = cv2.VideoWriter(fileName,fourcc, 30, frameSize,True) #change resolution if needed
+        writer = cv2.VideoWriter(fileName,fourcc,15, frameSize,True) #change resolution if needed
         if not writer.isOpened():
             raise RuntimeError(f"Failed to open writer for cam{i}")
 

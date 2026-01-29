@@ -9,9 +9,9 @@ import axios from "axios";
 
 export default function Detailed() {
 
-  const leftCameraSrc = "http://localhost:8000/video_left";
-  const rightCameraSrc = "http://localhost:8000/video_right";
-  const mainCameraSrc = "http://localhost:8000/video_main";
+  const leftCameraSrc = "http://localhost:8000/videoleft";
+  const rightCameraSrc = "http://localhost:8000/videoright";
+  const mainCameraSrc = "http://localhost:8000/videofront";
 
   const navigate = useNavigate();
 
