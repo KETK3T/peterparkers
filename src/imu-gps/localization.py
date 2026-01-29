@@ -56,3 +56,7 @@ while True:
     # velocity in x and y directions
     # heading in radians
     print(ekf)
+    ekf.load()
+
+
+

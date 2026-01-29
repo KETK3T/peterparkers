@@ -1,5 +1,6 @@
 import numpy as np
 from filterpy.kalman import ExtendedKalmanFilter
+import csv
 
 class EKF(ExtendedKalmanFilter):
     def __init__(self):
@@ -22,6 +23,13 @@ class EKF(ExtendedKalmanFilter):
 
         # Measurement noise (GPS) (R matrix), this will need to be adjusted to the GPS datasheets
         self.R = np.diag([3.0, 3.0])
+
+        # For creating test data -> used in load function
+        with open("load-data/output.csv", "w", newline="", encoding="utf-8") as f:
+            self.writer = csv.writer(f)
+        
+        self.writer.writerow(["id", "latitude", "longitude", "x-velocity", "y-velocity", "heading"])
+        self.count = 1 # csv row id
 
     # Prediction step
     # dt is change in time, will use timestamps to calculate
@@ -76,3 +84,9 @@ class EKF(ExtendedKalmanFilter):
             f"Velocity: X:{self.x[2]:.3f}, Y:{self.x[3]:.3f} m/s\n"
             f"Heading: {self.x[4]:.3f} radians\n"
         )
+    
+    def load(self):
+        self.writer.writerow([self.count,self.x[0],self.x[1],self.x[2],self.x[3],self.x[4]])
+        self.count += 1
+    
+    
