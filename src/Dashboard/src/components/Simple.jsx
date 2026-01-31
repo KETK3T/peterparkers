@@ -1,10 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import MapView from "../backend/MapView.jsx";
-import mapPlaceholder from "../pictures/map-placeholder.png";
-import team_logo from "../pictures/peter_parkers_logo.jpg";
 import "./Simple.css";
-// import MainCamera from "../backend/MainCamera.jsx";
 import axios from "axios"
 
 export default function Simple() {

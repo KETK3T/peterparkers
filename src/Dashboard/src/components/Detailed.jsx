@@ -1,9 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import "./Detailed.css";
-// import MainCamera from "../backend/MainCamera.jsx";
-// import LeftCamera from "../backend/LeftCamera.jsx";
-// import RightCamera from "../backend/RightCamera.jsx";
 import MapView from "../backend/MapView.jsx";
 import axios from "axios";
 
@@ -66,6 +63,7 @@ export default function Detailed() {
     getCameraDevices();
   }, []);
 
+   //Part of the Exit Button
   const handleExit = () => {
     const confirmed = window.confirm("Are you sure you want to exit the Detailed View?");
     if (confirmed) navigate("/");
@@ -73,7 +71,7 @@ export default function Detailed() {
 
   // Loading state
   if (isLoading) {
-    return <div className="detailed-container">Detecting available cameras...</div>;
+    return <div className="detailed-container">LOADING....</div>;
   }
 
 
@@ -82,42 +80,15 @@ export default function Detailed() {
   const leftCam = cameraDevices[1];
   const rightCam = cameraDevices[2];
 
+
+
+//THE INTERFACE SETUP
   return (
     <div className="detailed-container">
-      {/* LEFT SIDE — MAP */}
+      {/* LEFT SIDE OF THE INTERFACE */}
       <div className="left-side">
         <div className="map-section">
           <MapView />
-        </div>
-      </div>
-
-      {/* RIGHT SIDE — CAMERAS */}
-      <div className="right-side">
-        {/* FRONT CAMERA */}
-        <div className="main-camera-container">
-          <div className="camera-label">
-            FRONT CAMERA {frontCam?.label ? `(${frontCam.label})` : ""}
-          </div>
-            <img src={mainCameraSrc} className="camera-feed" />
-        </div>
-
-        {/* LOWER CAMERAS */}
-        <div className="lower-cameras">
-          {/* LEFT CAMERA */}
-          <div className="small-camera-box">
-            <div className="camera-label">
-              LEFT CAMERA {leftCam?.label ? `(${leftCam.label})` : ""}
-            </div>
-                <img src={leftCameraSrc} className="camera-feed" />
-          </div>
-
-          {/* RIGHT CAMERA */}
-          <div className="small-camera-box">
-            <div className="camera-label">
-              RIGHT CAMERA {rightCam?.label ? `(${rightCam.label})` : ""}
-            </div>
-                <img src={rightCameraSrc} className="camera-feed" />
-          </div>
         </div>
 
         {/* EXIT BUTTON */}
@@ -125,6 +96,29 @@ export default function Detailed() {
           <button onClick={handleExit} className="exit-button">
             Exit
           </button>
+        </div>
+
+
+      </div>
+
+      {/* RIGHT SIDE OF THE INTERFACE */}
+      <div className="right-side">
+        {/*MAIN CAMERA */}
+        <div className="main-camera-container">
+            <img src={mainCameraSrc} className="camera-feed" />
+        </div>
+
+        {/* LOWER CAMERAS */}
+        <div className="lower-cameras">
+          {/* LEFT CAMERA */}
+          <div className="small-camera-box">
+                <img src={leftCameraSrc} className="camera-feed" />
+            </div>
+
+          {/* RIGHT CAMERA */}
+          <div className="small-camera-box">
+                <img src={rightCameraSrc} className="camera-feed" />
+          </div>
         </div>
       </div>
     </div>
