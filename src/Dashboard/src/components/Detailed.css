@@ -44,10 +44,10 @@
   overflow: hidden;
 }
 
-.main-camera-container {
+.main-camera-box{
   border: 2px solid;
   flex: 2;
-  width: 640px;
+  width: 480px;
   height: 200px;
   flex-direction: right-column;
 }

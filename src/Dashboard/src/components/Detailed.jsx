@@ -23,25 +23,6 @@ export default function Detailed() {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const foundVideoDevices = devices.filter((d) => d.kind === "videoinput");
 
-        console.log("--- Detected Cameras ---");
-        foundVideoDevices.forEach((d, i) => {
-          console.log(`Camera ${i + 1}: ${d.label || "Unnamed Camera"} (${d.deviceId})`);
-        });
-        console.log("------------------------");
-
-        // Sort or label cameras
-        const frontCam =
-          foundVideoDevices.find((d) => d.label.toLowerCase().includes("front")) ||
-          foundVideoDevices[0];
-        const leftCam =
-          foundVideoDevices.find((d) => d.label.toLowerCase().includes("left")) ||
-          foundVideoDevices[1];
-        const rightCam =
-          foundVideoDevices.find((d) => d.label.toLowerCase().includes("right")) ||
-          foundVideoDevices[2];
-
-        // Filter undefined/null values
-        const activeCams = [frontCam, leftCam, rightCam].filter(Boolean);
 
         setCameraDevices(activeCams);
         setIsLoading(false);
@@ -73,12 +54,6 @@ export default function Detailed() {
   }
 
 
-  // Assign the first three cameras (if available)
-  const frontCam = cameraDevices[0];
-  const leftCam = cameraDevices[1];
-  const rightCam = cameraDevices[2];
-
-
 
 //THE INTERFACE SETUP
   return (
@@ -104,13 +79,13 @@ export default function Detailed() {
       <div className="camera-side">
          <div className="left-camera-box">
                 <img
-                src="http://localhost:8000/video/front"
+                src="http://localhost:8000/video/left"
                 alt="Live Camera"
                 className="camera-feed"
               />
         </div>
 
-        <div className="main-camera-container">
+        <div className="main-camera-box">
             <img
                 src="http://localhost:8000/video/front"
                 alt="Live Camera"
@@ -120,7 +95,7 @@ export default function Detailed() {
 
         <div className="right-camera-box">
                 <img
-                src="http://localhost:8000/video/front"
+                src="http://localhost:8000/video/right"
                 alt="Live Camera"
                 className="camera-feed"
               />
