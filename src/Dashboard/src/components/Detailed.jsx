@@ -6,9 +6,7 @@ import axios from "axios";
 
 export default function Detailed() {
 
-  const leftCameraSrc = "http://localhost:8000/videoleft";
-  const rightCameraSrc = "http://localhost:8000/videoright";
-  const mainCameraSrc = "http://localhost:8000/videofront";
+
 
   const navigate = useNavigate();
 
@@ -65,7 +63,7 @@ export default function Detailed() {
 
    //Part of the Exit Button
   const handleExit = () => {
-    const confirmed = window.confirm("Are you sure you want to exit the Detailed View?");
+    const confirmed = window.confirm("Are you sure you want to exit the camera view?");
     if (confirmed) navigate("/");
   };
 
@@ -85,13 +83,14 @@ export default function Detailed() {
 //THE INTERFACE SETUP
   return (
     <div className="detailed-container">
+
+
       {/* LEFT SIDE OF THE INTERFACE */}
-      <div className="left-side">
+      <div className="map-side">
         <div className="map-section">
           <MapView />
         </div>
 
-        {/* EXIT BUTTON */}
         <div className="exit-section">
           <button onClick={handleExit} className="exit-button">
             Exit
@@ -102,25 +101,31 @@ export default function Detailed() {
       </div>
 
       {/* RIGHT SIDE OF THE INTERFACE */}
-      <div className="right-side">
-        {/*MAIN CAMERA */}
-        <div className="main-camera-container">
-            <img src={mainCameraSrc} className="camera-feed" />
+      <div className="camera-side">
+         <div className="left-camera-box">
+                <img
+                src="http://localhost:8000/video/front"
+                alt="Live Camera"
+                className="camera-feed"
+              />
         </div>
 
-        {/* LOWER CAMERAS */}
-        <div className="lower-cameras">
-          {/* LEFT CAMERA */}
-          <div className="small-camera-box">
-                <img src={leftCameraSrc} className="camera-feed" />
-            </div>
+        <div className="main-camera-container">
+            <img
+                src="http://localhost:8000/video/front"
+                alt="Live Camera"
+                className="camera-feed"
+              />
+        </div>
 
-          {/* RIGHT CAMERA */}
-          <div className="small-camera-box">
-                <img src={rightCameraSrc} className="camera-feed" />
-          </div>
+        <div className="right-camera-box">
+                <img
+                src="http://localhost:8000/video/front"
+                alt="Live Camera"
+                className="camera-feed"
+              />
+        </div>
         </div>
       </div>
-    </div>
   );
 }

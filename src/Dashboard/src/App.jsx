@@ -3,13 +3,12 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import team_logo from "./pictures/peter_parkers_logo.jpg";
 import './App.css';
 import Detailed from './components/Detailed.jsx';
-import Simple from './components/Simple.jsx';
 
 function AppContent() {
   const location = useLocation();
 
   const hideHeader =
-    location.pathname === "/detailed" || location.pathname === "/simplified";
+    location.pathname === "/detailed";
 
   return (
     <div className="app-container">
@@ -23,11 +22,7 @@ function AppContent() {
 
           <nav className="header-nav">
             <Link to="/detailed" className="nav-link">
-              Click To View (Detailed)
-            </Link>
-
-            <Link to="/simplified" className="nav-link">
-              Click To View (Simple)
+              Click To View
             </Link>
           </nav>
         </header>
@@ -36,7 +31,6 @@ function AppContent() {
       {/* Routing Section */}
       <Routes>
         <Route path="/detailed" element={<Detailed />} />
-        <Route path="/simplified" element={<Simple />} />
       </Routes>
     </div>
   );

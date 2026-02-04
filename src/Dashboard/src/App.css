@@ -37,13 +37,13 @@ html, body, #root {
 }
 
 .logo-img {
-  width: 200px;
-  height: 200px;
+  width: 10rem;
+  height: 10rem;
   object-fit: cover;
 }
 
 .header-title {
-  font-size: 8rem;
+  font-size: 6rem;
   font-weight: bolder;
   color: #1f2937;
   margin-bottom: 2rem;
