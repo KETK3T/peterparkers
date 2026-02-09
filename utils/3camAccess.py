@@ -2,6 +2,7 @@ import cv2
 import re
 import os
 import time
+from datetime import datetime
 from multiprocessing import Process, Queue, Lock
 # from ultralytics import YOLO
 
@@ -46,9 +47,9 @@ def capture(id,src, queue, w=640, h=480):
 if __name__ == "__main__":
     queues = [Queue(maxsize=1) for _ in range(3)]
 
-    sources = [1, 3, 7]
-    # v4lt-ctl --list-devices
-    os.system('v4lt-ctl --list devices > camInfo.txt')
+    sources = [0, 0, 0]
+    # v4l2-ctl --list-devices
+    os.system('v4l2-ctl --list-devices > camInfo.txt')
     with open("camInfo.txt") as f:
         while(True):
             usb_1 = 2.1
@@ -58,16 +59,16 @@ if __name__ == "__main__":
                 break
             if "Arducam_12MP" in line:
                 line = f.readline()
-                sources[0] = re.findall(r'\d+', line)
-            elif "Arducam USB Camera" in line and usb_1 == re.findall(r'\d+\.\d+', line):
+                sources[0] = int(re.search(r'\d+', line).group())
+            elif "Arducam USB Camera" in line and usb_1 == float(re.search(r'\d+\.\d+', line).group()):
                 line = f.readline()
-                sources[1] = re.findall(r'\d+', line)
-            elif "Arducam USB Camera" in line and usb_2 == re.findall(r'\d+\.\d+', line):
+                sources[1] = int(re.search(r'\d+', line).group())
+            elif "Arducam USB Camera" in line and usb_2 == float(re.search(r'\d+\.\d+', line).group()):
                 line = f.readline()
-                sources[2] = re.findall(r'\d+', line)
+                sources[2] = int(re.search(r'\d+', line).group())
+    f.close()
 
     # dont forget to change usbc camera frame size
-    # model = YOLO("models/yolo11n.pt")
     processes = []
     for i, src in enumerate(sources):
         p = Process(target=capture, args=(i, src, queues[i]))
@@ -76,8 +77,9 @@ if __name__ == "__main__":
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writers = []
+    now = datetime.now()
     for i in range(3):
-        fileName = f"cam{i}.mp4"
+        fileName = f"cam{i} {now}.mp4"
 
         if os.path.isfile(fileName):
             os.remove(fileName)
@@ -91,24 +93,6 @@ if __name__ == "__main__":
         writers.append(writer)
     try:
         while True:
-            # frames = []
-            #
-            # for q in queues:
-            #     if not q.empty():
-            #         frames.append(q.get())
-            #     else:
-            #         frames.append(None)
-
-            # for i, frame in enumerate(frames):
-            #     if frame is not None:
-            #         # results = model.predict(source=frames, show=False, device=0, conf=0.25)
-            #         # annotated_frame = results[0].plot()
-            #         cv2.imshow(f"cam{i}", frame)
-            #
-            # if cv2.waitKey(1) & 0xFF == ord('q'):
-            #     break
-            # time.sleep(0.5)
-
             for i, q in enumerate(queues):
                 if not q.empty():
                     frame = q.get()
