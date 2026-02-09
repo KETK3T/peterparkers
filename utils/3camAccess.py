@@ -1,11 +1,9 @@
 import cv2
+import re
 import os
 import time
 from multiprocessing import Process, Queue, Lock
 # from ultralytics import YOLO
-
-
-
 
 class LastFrame:
     def __init__(self):
@@ -23,8 +21,6 @@ class LastFrame:
 
 
 def capture(id,src, queue, w=640, h=480):
-
-
     cap = cv2.VideoCapture(src, cv2.CAP_V4L2)
     print(f"frame size: {cap.get(cv2.CAP_PROP_FRAME_WIDTH)} {cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
     # cap.set(cv2.CAP_PROP_FRAME_WIDTH,w)
@@ -49,7 +45,27 @@ def capture(id,src, queue, w=640, h=480):
 
 if __name__ == "__main__":
     queues = [Queue(maxsize=1) for _ in range(3)]
+
     sources = [1, 3, 7]
+    # v4lt-ctl --list-devices
+    os.system('v4lt-ctl --list devices > camInfo.txt')
+    with open("camInfo.txt") as f:
+        while(True):
+            usb_1 = 2.1
+            usb_2 = 2.2
+            line = f.readline()
+            if not line:
+                break
+            if "Arducam_12MP" in line:
+                line = f.readline()
+                sources[0] = re.findall(r'\d+', line)
+            elif "Arducam USB Camera" in line and usb_1 == re.findall(r'\d+\.\d+', line):
+                line = f.readline()
+                sources[1] = re.findall(r'\d+', line)
+            elif "Arducam USB Camera" in line and usb_2 == re.findall(r'\d+\.\d+', line):
+                line = f.readline()
+                sources[2] = re.findall(r'\d+', line)
+
     # dont forget to change usbc camera frame size
     # model = YOLO("models/yolo11n.pt")
     processes = []
@@ -57,7 +73,6 @@ if __name__ == "__main__":
         p = Process(target=capture, args=(i, src, queues[i]))
         p.start()
         processes.append(p)
-
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writers = []
