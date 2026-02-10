@@ -3,13 +3,22 @@ import numpy as np
 from ekf import EKF
 from imu import IMU
 from gps import GPS
+import csv
 
 ekf = EKF()
 prev_time = time.time()
 myIMU = IMU()
 myGPS = GPS()
 
-while True:
+# For creating test data
+# Creates a new CSV file and prints headers, file closes before while loop
+with open("output.csv", "w", newline="", encoding="utf-8") as f:
+    cWriter = csv.writer(f)
+
+    cWriter.writerow(["id", "latitude", "longitude", "x-velocity", "y-velocity", "heading"])
+    count = 1 # csv row id
+
+while count < 10:
     time.sleep(0.5)
     # IMU readings
     ax, ay, az = myIMU.accel
@@ -56,7 +65,9 @@ while True:
     # velocity in x and y directions
     # heading in radians
     print(ekf)
-    ekf.load()
 
-
-
+    # File is reopened each file loop in append mode so that data can be added in a new line
+    with open("output.csv", "a", newline="", encoding="utf-8") as f:
+        cWriter = csv.writer(f)
+        cWriter.writerow([count, ekf.x[0], ekf.x[1], ekf.x[2], ekf.x[3], ekf.x[4]])
+        count += 1
