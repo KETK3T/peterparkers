@@ -19,6 +19,15 @@ myLocalization = Localization()
 @app.route("/sensor")
 def get_sensor_state():
     state = myLocalization.getstate()
+
+    state_dict = {
+        "longitude": float(state.x[0]),
+        "latitude": float(state.x[1]),
+        "velocity_x": float(state.x[2]),
+        "velocity_y": float(state.x[3]),
+        "heading": float(state.x[4])
+    }
+
     return jsonify(state)
 
 if __name__ == "__main__":
