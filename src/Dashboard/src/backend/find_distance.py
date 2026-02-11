@@ -3,231 +3,342 @@ import cv2
 from ultralytics import YOLO
 from flask import Flask, Response
 from flask_cors import CORS
-import multiprocessing as mp
-from multiprocessing import Process, Queue, Lock
+from multiprocessing import Process, Queue, Lock, Event, Value
+from multiprocessing.shared_memory import SharedMemory
 import numpy as np
-import math 
+import math
 import time
-
+from threading import Thread
+import torch
+import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = '0'
+os.environ['OPENCV_VIDEOIO_PRIORITY_GSTREAMER'] = '0'
+torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.enabled = True
+torch.set_num_threads(2)
+cv2.setNumThreads(2)
 
 app = Flask(__name__)
 CORS(app)
 processes = []
-class LastFrame:
-    def __init__(self):
-        self.lock = Lock()
-        self.frame = None
+stop_event = Event()
+
+SOURCES = [8, 0, 4]
+SHAPES = [
+    (480, 640, 3),
+    (480, 640, 3),
+    (480, 640, 3)
+]
+CAPTURE_FPS = 15
+INFERENCE_FPS = 5
+IMGSZ = 160
+CONF = 0.20
+JPEG_QUALITY = 50
+MODEL_PATH = "./models/best.pt"
+MAX_BATCH_SIZE = 3
+
+# MODEL_PATH = "best.engine"
+# yolo export model=best.pt format=engine device=0
+# yolo export model=best.pt format=engine int8=True data=data.yaml
+
+def sharedMemory_ndarray(shm: SharedMemory, shape):
+    return np.ndarray(shape, dtype=np.uint8, buffer=shm.buf)
 
 
-    def set(self,frame):
-        with self.lock:
-            self.frame = frame
+def draw_results(frame: np.ndarray, result) -> np.ndarray:
+    annotated = frame.copy()
+    ih, iw = annotated.shape[:2]
 
-    def get(self):
-        with self.lock:
-            return None if self.frame is None else self.frame.copy()
+    boxes = result.boxes
+    if boxes is None or len(boxes) == 0:
+        return annotated
+
+    names = result.names
+    ri_h, ri_w = result.orig_shape
+
+    sx = iw / ri_w
+    sy = ih / ri_h
+
+    masks = result.masks
+    if masks is not None:
+        mask_data = masks.data.cpu().numpy()
+        overlay = annotated.copy()
+
+        for j, box in enumerate(boxes):
+            conf = box.conf[0].item()
+            cls = int(box.cls[0])
+            color = (0, 255, 0)
+
+            m = mask_data[j]
+            m_resized = cv2.resize(m, (iw, ih), interpolation=cv2.INTER_LINEAR)
+            binary = (m_resized > 0.5).astype(np.uint8)
+            overlay[binary == 1] = color
+
+        cv2.addWeighted(overlay, 0.5, annotated, 0.5, 0, dst=annotated)
+
+    for box in boxes:
+        x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+        conf = float(box.conf[0])
+        cls = int(box.cls[0])
+        color = (0, 255, 0)
+        label = f"{names[cls]} {conf:.2f}"
+
+        if (ri_h, ri_w) != (ih, iw):
+            x1 = int(x1 * sx)
+            y1 = int(y1 * sy)
+            x2 = int(x2 * sx)
+            y2 = int(y2 * sy)
+
+        cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        cv2.rectangle(annotated, (x1, y1 - th - 4), (x1 + tw, y1), color, -1)
+        cv2.putText(annotated, label, (x1, y1 - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+
+    return annotated
 
 
-def capture(id,src,frame_queue: Queue):
+def capture_worker(id, src, shape, raw_shared_mem_name, raw_lock, raw_ready, raw_frame_id, stop_event):
+    # cap = cv2.VideoCapture(src)
     cap = cv2.VideoCapture(src, cv2.CAP_V4L2)
-    cap.set(cv2.CAP_PROP_FPS,15)
 
+
+
+    if id != 0:
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
+        cap.set(cv2.CAP_PROP_FPS, CAPTURE_FPS)
+    else:
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+        cap.set(cv2.CAP_PROP_FPS, 30)
+
+    cap.set(cv2.CAP_PROP_BUFFERSIZE,1)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, shape[1])
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, shape[0])
+
+    frame_counter = 0
+    skip = 1 if id == 0 else 1
     if not cap.isOpened():
         print(f"Failed to open camera {id}")
         return
-    # model = YOLO("models/best.pt")
-    while True:
-        ret, frame = cap.read()
-        if not ret:
+
+    actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+
+    actual_fps = cap.get(cv2.CAP_PROP_FPS)
+    print(f"Camera {id} opened with resolution {actual_w}x{actual_h} at {actual_fps} FPS")
+
+    H, W, C = shape
+    shm = SharedMemory(name=raw_shared_mem_name)
+    buf = sharedMemory_ndarray(shm, shape)
+    local_id = 0
+    raw_ready.value = 0
+
+    while not stop_event.is_set():
+        ok, frame = cap.read()
+        if not ok:
             print(f"Failed to return frames from camera {id}")
             break
+        if id == 0:
+            frame_counter += 1
+            if frame_counter % skip != 0:
+                continue
+        if frame.shape[:2] != (H, W):
+            frame = cv2.resize(frame, (W, H), interpolation=cv2.INTER_LINEAR)
 
-        # results = model.predict(frame,conf=0.25,verbose=False)[0]
-        # anonFrame = results.plot()
-        if frame_queue.full():
-            try:
-                frame_queue.get_nowait()
-            except:
-                pass
-        frame_queue.put(frame)
+        if frame.ndim == 2:
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
+        with raw_lock:
+            np.copyto(buf, frame)
 
+        local_id += 1
+        raw_frame_id.value = local_id
+        raw_ready.value = 1
 
     cap.release()
+    shm.close()
 
-# class proc(mp.Process):
-#     def __init__(self,cam_id, name=None, model="models/best.pt"):
-#         super().__init__(name=name or f"Camera-{cam_id}")
-#         self.cam_id = cam_id
-#         self.model = model
-#         self.stop_event = mp.Event()
-#         self.frame_queue = mp.Queue(maxsize=1)
-#     def run(self):
-#         print(f"[{self.name}] Starting camera {self.cam_id}")
-#         cap = cv2.VideoCapture(self.cam_id,cv2.CAP_V4L2)
-#         # cap = cv2.VideoCapture("tests/F_tilted_6_cropped.mov")
-#         # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
-#         # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
-#         cap.set(cv2.CAP_PROP_FPS, 15)
-#
-#         if not cap.isOpened():
-#             print(f"[{self.name}] Failed to open camera {self.cam_id}")
-#             return
-#
-#         model_instance = YOLO(self.model)
-#         while not self.stop_event.is_set():
-#             ret, frame = cap.read()
-#             if not ret:
-#                 print(f"[{self.name}] Failed to get a frame")
-#                 break
-#
-#             H = frame.shape[0]
-#             crp = int(H*0.25)
-#             frame = frame[crp:H,:]
-#
-#             results = model_instance.predict(source=frame, show=False,device=0, conf=0.25)
-#
-#             annotated_frame = results[0].plot()
-#             boxes = results[0].boxes.xyxy.cpu().numpy()
-#             boxes = boxes[np.argsort((boxes[:, 0] + boxes[:, 2]) / 2)]
-#             for i, box in enumerate(boxes):
-#                 x1,y1,x2,y2 = map(int,box)
-#                 print(f"Box {i}:  (x1={x1}, y1={y1}, x2={x2}, y2={y2})")
-#
-#             n = len(boxes)
-#
-#             for i in range(n - 1):
-#                 x1a, y1a, x2a, y2a = map(int, boxes[i])
-#                 x1b, y1b, x2b, y2b = map(int, boxes[i + 1])
-#                 len2 = math.dist((x1a, y2a), (x1b, y2b))
-#                 len1 = math.dist((x2a, y2a), (x2b, y2b))
-#
-#                 mid_x_a = int((x1a + x1b) / 2)
-#                 mid_x_b = int((x2a + x2b) / 2)
-#                 mid_y_a = int((y2a + y2b) / 2)
-#                 mid_y_b = int((y2a + y2b) / 2)
-#                 label = f"first: {len1: .1f}px"
-#                 label2 = f"second: {len2: .1f}px"
-#
-#                 a1 = np.array([x1a, y2a])
-#                 a2 = np.array([x1b, y2b])
-#                 b1 = np.array([x2a, y2a])
-#                 b2 = np.array([x2b, y2b])
-#
-#                 line1 = np.array([a1, a2])
-#                 line2 = np.array([b1, b2])
-#                 cv2.line(annotated_frame, (x1a, y2a), (x1b, y2b), (0, 0, 255), 2)
-#                 cv2.line(annotated_frame, (x2a, y2a), (x2b, y2b), (0, 0, 255), 2)
-#                 cv2.putText(annotated_frame, label, (mid_x_a, mid_y_a),
-#                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
-#                 cv2.putText(annotated_frame, label2, (mid_x_b, mid_y_b),
-#                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
-#
-#             if not self.frame_queue.empty():
-#                 try:
-#                     self.frame_queue.get_nowait()
-#                 except:
-#                     pass
-#             self.frame_queue.put(annotated_frame)
-#
-#         cap.release()
-#         print(f"[{self.name}] Camera stopped")
-#
-#     def stop(self):
-#         self.stop_event.set()
-#     def get_frame(self):
-#         if not self.frame_queue.empty():
-#             return self.frame_queue.get()
-#         return None
-#
 
-def generate_stream(last_frame: LastFrame):
-    while True:
+def inference_loop(shapes, raw_shms, annotated_shms, raw_locks, annotated_locks,
+                   raw_ready, raw_frame_id, model_path, stop_event):
+    model = YOLO(model_path)
+    model.to("cuda")
+
+    if not model_path.endswith(".engine"):
+        model.fuse()
+
+    dummy = np.zeros((IMGSZ,IMGSZ,3), dtype=np.uint8)
+    _ = model.predict(dummy,imgsz=IMGSZ, conf=CONF, verbose=False)
+    torch.cuda.empty_cache()
+
+    last_seen = [0] * len(raw_shms)
+    frame_time = 1.0 / INFERENCE_FPS
+    last_time = 0.0
+
+    while not stop_event.is_set():
+        now = time.time()
+        if now - last_time < frame_time:
+            time.sleep(0.01)
+            continue
+
+        frames = []
+        valid_indices = []
+        raw_frames = []
+        print([raw_frame_id[i].value for i in range(len(raw_shms))])
+        for i in range(len(raw_shms)):
+            fid = raw_frame_id[i].value
+            if fid == 0 or fid == last_seen[i]:
+                continue
+
+            with raw_locks[i]:
+                frame = raw_shms[i].copy()
+            frames.append(frame)
+            raw_frames.append(frame)
+            valid_indices.append(i)
+
+            if len(frames) >= MAX_BATCH_SIZE:
+                break
+
+        if not frames:
+            time.sleep(0.002)
+            continue
+
         try:
-            frame = last_frame.get(timeout=1)
-        except:
+
+            results = model.predict(frames, imgsz=IMGSZ, conf=CONF, verbose=False, device='CUDA', half=True)
+
+            for result, idx, raw_frame in zip(results, valid_indices, raw_frames):
+                annotated = draw_results(raw_frame, result)
+
+                H, W, _ = shapes[idx]
+                if annotated.shape[:2] != (H, W):
+                    annotated = cv2.resize(annotated, (W, H))
+                with annotated_locks[idx]:
+                    np.copyto(annotated_shms[idx], annotated)
+
+                last_seen[idx] = raw_frame_id[idx].value
+
+            if now - last_time > 1.0:
+                torch.cuda.empty_cache()
+        except Exception as e:
+            print(f"Inference error: {e} ")
+            torch.cuda.empty_cache()
+            time.sleep(0.1)
+
+        last_time = now
+
+
+def generate_stream(cam_index, annotated_shm, annotated_locks, stop_event):
+    last_frame = None
+    frame_time = 1.0/15
+    last_send = 0
+    while not stop_event.is_set():
+        now = time.time()
+        if now - last_send < frame_time:
+            time.sleep(0.01)
             continue
-        # if frame is None:
-        #     time.sleep(0.01)
-        #     continue
-        ret, buffer = cv2.imencode('.jpg',frame)
-        if not ret:
-            continue
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-# def generate_stream(cam):
-#     try:
-#         while True:
-#             frame = cam.get_frame()
-#
-#             if frame is None:
-#                 continue
-#             ret, buffer = cv2.imencode('.jpg',frame)
-#             yield (b'--frame\r\n'
-#                    b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-#     except GeneratorExit:
-#         print("Client disconnected from stream")
-#         return
+
+        try:
+
+            with annotated_locks[cam_index]:
+                frame = annotated_shm[cam_index].copy()
+                # print(f"In generate stream frame size is {frame.shape}")
+            ok, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
+            if not ok:
+                continue
+
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+
+            last_send = now
+        except Exception as e:
+            print(f"Stream error: {e}")
+            time.sleep(0.1)
 
 @app.route('/video/front')
 def video_front():
     return Response(
-        generate_stream(frames[0]),
-        mimetype='multipart/x-mixed-replace; boundary=frame'
-    )
+        generate_stream(0, ANN_BUFS, ANN_LOCKS, stop_event),
+        mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 @app.route('/video/left')
 def video_left():
     return Response(
-        generate_stream(frames[1]),
+        generate_stream(1, ANN_BUFS, ANN_LOCKS, stop_event),
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
+
 
 @app.route('/video/right')
 def video_right():
     return Response(
-        generate_stream(frames[2]),
+        generate_stream(2, ANN_BUFS, ANN_LOCKS, stop_event),
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
 
 
+@atexit.register
+def shutdown_cams():
+    stop_event.set()
+    print("Shutting down all camera processes")
+    for p in processes:
+        try:
+            p.join(timeout=3)
+        except Exception:
+            pass
 
-# cam1 = proc(0, model="models/best.pt", name="Front Cam")
-# cam2 = proc(2, model="models/best.pt", name="Left Cam")
-# cam3 = proc(6, model="models/best.pt", name="Right Cam")
-# cam1.start()
-# cam2.start()
-# cam3.start()
+    for shm in RAW_SHM_OBJS + ANN_SHM_OBJS:
+        try:
+            shm.close()
+            shm.unlink()
+        except Exception:
+            pass
+    print("All cameras have stopped and memory cleaned up")
 
-@app.route('/api/users')
-def get_users():
-    return {"users": ["Camera running properly!"]}
 
 if __name__ == "__main__":
-    # mp.set_start_method("spawn",force=True)
-    # queues = [Queue(maxsize=1) for _ in range(3)]
-    sources = [2, 4, 8]
-    frames  = [Queue(maxsize=2) for _ in sources]
 
-    for i, src in enumerate(sources):
-        p = Process(target=capture, args=(i,src,frames[i]), daemon=True)
+    probe = cv2.VideoCapture(SOURCES[2])
+    ok, first = probe.read()
+    probe.release()
+    if not ok:
+        raise RuntimeError(f"Failed to read from camera source {SOURCES[0]}")
+
+    RAW_SHM_OBJS = []
+    ANN_SHM_OBJS = []
+    RAW_BUFS = []
+    ANN_BUFS = []
+
+    for shape in SHAPES:
+        H, W, C = shape
+        size = H * W * C
+        raw = SharedMemory(create=True, size=size)
+        ann = SharedMemory(create=True, size=size)
+        RAW_SHM_OBJS.append(raw)
+        ANN_SHM_OBJS.append(ann)
+        RAW_BUFS.append(sharedMemory_ndarray(raw, shape))
+        ANN_BUFS.append(sharedMemory_ndarray(ann, shape))
+
+    for buf in ANN_BUFS:
+        buf[:] = 0
+
+    RAW_LOCKS = [Lock() for _ in SOURCES]
+    ANN_LOCKS = [Lock() for _ in SOURCES]
+    RAW_READY = [Value('i', 0) for _ in SOURCES]
+    RAW_FRAME_ID = [Value('i', 0) for _ in SOURCES]
+
+    for i, src in enumerate(SOURCES):
+        p = Process(target=capture_worker, args=(i, src, SHAPES[i], RAW_SHM_OBJS[i].name,
+                                                 RAW_LOCKS[i], RAW_READY[i],
+                                                 RAW_FRAME_ID[i], stop_event), daemon=True)
         p.start()
         processes.append(p)
 
+    t = Thread(target=inference_loop, args=(SHAPES, RAW_BUFS, ANN_BUFS,
+                                            RAW_LOCKS, ANN_LOCKS,
+                                            RAW_READY, RAW_FRAME_ID,
+                                            MODEL_PATH, stop_event), daemon=True)
+    t.start()
 
-    app.run(host='localhost', port=8000, use_reloader=False)
-
-
-@atexit.register
-def shutdown_cams():
-    print("Shutting down all camera processes")
-    for p in processes:
-        p.terminate()
-        p.join()
-    # cam1.stop()
-    # cam3.stop()
-    # cam2.stop()
-    # cam1.join()
-    # cam2.join()
-    # cam3.join()
-    print("All cameras have stopped")
+    app.run(host="localhost", port=8000, use_reloader=False, threaded=True)
