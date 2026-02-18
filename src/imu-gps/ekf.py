@@ -78,7 +78,4 @@ class EKF(ExtendedKalmanFilter):
             f"Heading: {self.x[4]:.3f} radians\n"
         )
 
-    def getstate(self):
-        return self.x
-    
     
