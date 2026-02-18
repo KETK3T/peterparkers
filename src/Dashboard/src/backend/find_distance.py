@@ -6,14 +6,19 @@ from flask_cors import CORS
 from multiprocessing import Process, Queue, Lock, Event, Value
 from multiprocessing.shared_memory import SharedMemory
 import numpy as np
-import math
 import time
 from threading import Thread
 import torch
 import os
+import re
+
+_MAIN_PID = 0
+from datetime import datetime
+import argparse
+
 os.environ['CUDA_LAUNCH_BLOCKING'] = '0'
 os.environ['OPENCV_VIDEOIO_PRIORITY_GSTREAMER'] = '0'
-torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.enabled = True
 torch.set_num_threads(2)
 cv2.setNumThreads(2)
@@ -23,7 +28,8 @@ CORS(app)
 processes = []
 stop_event = Event()
 
-SOURCES = [8, 0, 4]
+SOURCES = [0, 0, 0]
+
 SHAPES = [
     (480, 640, 3),
     (480, 640, 3),
@@ -33,12 +39,88 @@ CAPTURE_FPS = 15
 INFERENCE_FPS = 5
 IMGSZ = 160
 CONF = 0.20
-JPEG_QUALITY = 50
-MODEL_PATH = "./models/best.pt"
+JPEG_QUALITY = 70
+MODEL_PATH = "./models/best.engine"
 MAX_BATCH_SIZE = 3
+RECORD_FPS = 15
+RECORD_PATH = "./recordings"
+CACHE_CLEAR_INTERVAL = 10.0
+RAW_SHM_OBJS = []
+ANN_SHM_OBJS = []
+RAW_BUFS = []
+ANN_BUFS = []
+RAW_LOCKS = []
+ANN_LOCKS = []
+RAW_READY = []
+RAW_FRAME_ID = []
+processes = []
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-r",
+        "--record",
+        "-R",
+        action="store_true",
+        help="Record Cameras instead of running streaming server"
+    )
+    return parser.parse_args()
+
+
+def record(cam_idx, annotated_shm, annotated_locks, stop_event):
+    print(f"Recording started for cam {cam_idx}")
+    os.makedirs(RECORD_PATH, exist_ok=True)
+    Rnow = datetime.now()
+    H, W, _ = SHAPES[cam_idx]
+
+    filename = os.path.join(RECORD_PATH, f"cam{cam_idx}_{Rnow.strftime('%Y%m%d_%H%M%S')}.mp4")
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+
+    print(f"cam {cam_idx}: filename={filename}")
+    print(f"cam {cam_idx}: resolution={W}X{H}, fps={RECORD_FPS}, fourcc={fourcc}")
+    print(
+        f"cam {cam_idx}: RECORD_PATH exists={os.path.exists(RECORD_PATH)}, writable={os.access(RECORD_PATH, os.W_OK)}")
+
+    writer = cv2.VideoWriter(filename, fourcc, RECORD_FPS, (W, H), True)
+
+    if not writer.isOpened():
+        print(f"Failed to start writing for cam {cam_idx}")
+        return
+
+    frame_time = 1.0 / RECORD_FPS
+    last_write = 0.0
+
+    last_frame = np.zeros((H, W, 3), dtype=np.uint8)
+
+    while not stop_event.is_set():
+
+        now = time.time()
+        if now - last_write < frame_time:
+            time.sleep(0.01)
+            continue
+
+        try:
+            with annotated_locks[cam_idx]:
+                frame = annotated_shm[cam_idx].copy()
+
+            if frame.sum() != 0:
+                last_frame = frame
+
+            writer.write(last_frame)
+            last_write = now
+
+        except Exception as e:
+            print(f"Recording error cam {cam_idx} : {e}")
+            time.sleep(0.05)
+
+    writer.release()
+    print(f"Recording saved: {filename}")
+
 
 # MODEL_PATH = "best.engine"
-# yolo export model=best.pt format=engine device=0
+# yolo export model=best.pt format=engine device=0 half=True imgsz=160
+# yolo export model=best.pt format=engine device=0 half=True imgsz=160 workspace=1
 # yolo export model=best.pt format=engine int8=True data=data.yaml
 
 def sharedMemory_ndarray(shm: SharedMemory, shape):
@@ -46,7 +128,7 @@ def sharedMemory_ndarray(shm: SharedMemory, shape):
 
 
 def draw_results(frame: np.ndarray, result) -> np.ndarray:
-    annotated = frame.copy()
+    annotated = frame
     ih, iw = annotated.shape[:2]
 
     boxes = result.boxes
@@ -71,6 +153,7 @@ def draw_results(frame: np.ndarray, result) -> np.ndarray:
 
             m = mask_data[j]
             m_resized = cv2.resize(m, (iw, ih), interpolation=cv2.INTER_LINEAR)
+
             binary = (m_resized > 0.5).astype(np.uint8)
             overlay[binary == 1] = color
 
@@ -98,10 +181,14 @@ def draw_results(frame: np.ndarray, result) -> np.ndarray:
 
 
 def capture_worker(id, src, shape, raw_shared_mem_name, raw_lock, raw_ready, raw_frame_id, stop_event):
+    import signal
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    os.environ['OPENBLAS_NUM_THREADS'] = '2'
+    os.environ['MALLOC_TRIM_THRESHOLD_'] = '100000'
+
     # cap = cv2.VideoCapture(src)
     cap = cv2.VideoCapture(src, cv2.CAP_V4L2)
-
-
 
     if id != 0:
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
@@ -110,19 +197,18 @@ def capture_worker(id, src, shape, raw_shared_mem_name, raw_lock, raw_ready, raw
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         cap.set(cv2.CAP_PROP_FPS, 30)
 
-    cap.set(cv2.CAP_PROP_BUFFERSIZE,1)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, shape[1])
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, shape[0])
 
     frame_counter = 0
-    skip = 1 if id == 0 else 1
+    skip = 3 if id == 0 else 1
     if not cap.isOpened():
         print(f"Failed to open camera {id}")
         return
 
     actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
 
     actual_fps = cap.get(cv2.CAP_PROP_FPS)
     print(f"Camera {id} opened with resolution {actual_w}x{actual_h} at {actual_fps} FPS")
@@ -161,19 +247,21 @@ def capture_worker(id, src, shape, raw_shared_mem_name, raw_lock, raw_ready, raw
 
 def inference_loop(shapes, raw_shms, annotated_shms, raw_locks, annotated_locks,
                    raw_ready, raw_frame_id, model_path, stop_event):
-    model = YOLO(model_path)
-    model.to("cuda")
+    model = YOLO(model_path, task='segment')
+    # model.to("cuda")
 
     if not model_path.endswith(".engine"):
         model.fuse()
 
-    dummy = np.zeros((IMGSZ,IMGSZ,3), dtype=np.uint8)
-    _ = model.predict(dummy,imgsz=IMGSZ, conf=CONF, verbose=False)
+    dummy = np.zeros((IMGSZ, IMGSZ, 3), dtype=np.uint8)
+    dummy_batch = [dummy,dummy,dummy]
+    _ = model.predict(dummy_batch, imgsz=IMGSZ, conf=CONF, verbose=False, device='cuda',half=True)
     torch.cuda.empty_cache()
 
     last_seen = [0] * len(raw_shms)
     frame_time = 1.0 / INFERENCE_FPS
     last_time = 0.0
+    last_cache_clear = 0.0
 
     while not stop_event.is_set():
         now = time.time()
@@ -204,10 +292,16 @@ def inference_loop(shapes, raw_shms, annotated_shms, raw_locks, annotated_locks,
             continue
 
         try:
-
-            results = model.predict(frames, imgsz=IMGSZ, conf=CONF, verbose=False, device='CUDA', half=True)
+            while len(frames) < MAX_BATCH_SIZE:
+                frames.append(np.zeros((IMGSZ,IMGSZ, 3), dtype=np.uint8))
+                raw_frames.append(None)
+                valid_indices.append(None)
+            results = model.predict(frames, imgsz=IMGSZ, conf=CONF, verbose=False, device='cuda', half=True)
 
             for result, idx, raw_frame in zip(results, valid_indices, raw_frames):
+                # print(f"yolo results from engine looking for not none: {result.masks}")
+                if idx is None:
+                    continue
                 annotated = draw_results(raw_frame, result)
 
                 H, W, _ = shapes[idx]
@@ -218,19 +312,23 @@ def inference_loop(shapes, raw_shms, annotated_shms, raw_locks, annotated_locks,
 
                 last_seen[idx] = raw_frame_id[idx].value
 
-            if now - last_time > 1.0:
-                torch.cuda.empty_cache()
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             print(f"Inference error: {e} ")
             torch.cuda.empty_cache()
             time.sleep(0.1)
 
         last_time = now
 
+        if now - last_cache_clear > CACHE_CLEAR_INTERVAL:
+            torch.cuda.empty_cache()
+            last_cache_clear = now
+
 
 def generate_stream(cam_index, annotated_shm, annotated_locks, stop_event):
     last_frame = None
-    frame_time = 1.0/15
+    frame_time = 1.0 / 15
     last_send = 0
     while not stop_event.is_set():
         now = time.time()
@@ -254,6 +352,7 @@ def generate_stream(cam_index, annotated_shm, annotated_locks, stop_event):
         except Exception as e:
             print(f"Stream error: {e}")
             time.sleep(0.1)
+
 
 @app.route('/video/front')
 def video_front():
@@ -280,6 +379,8 @@ def video_right():
 
 @atexit.register
 def shutdown_cams():
+    if os.getpid() != _MAIN_PID:
+        return
     stop_event.set()
     print("Shutting down all camera processes")
     for p in processes:
@@ -298,17 +399,35 @@ def shutdown_cams():
 
 
 if __name__ == "__main__":
+    _MAIN_PID = os.getpid()
+    os.system('v4l2-ctl --list-devices > camInfo.txt')
+    with open("camInfo.txt") as f:
+        while (True):
+            usb_1 = 2.1
+            usb_2 = 2.2
+            line = f.readline()
+            if not line:
+                break
+
+            if "Arducam_12MP" in line:
+                line = f.readline()
+                SOURCES[0] = int(re.search(r'\d+', line).group())
+            elif "Arducam USB Camera" in line and usb_1 == float(re.search(r'\d+\.\d+', line).group()):
+                line = f.readline()
+                SOURCES[1] = int(re.search(r'\d+', line).group())
+            elif "Arducam USB Camera" in line and usb_2 == float(re.search(r'\d+\.\d+', line).group()):
+                line = f.readline()
+                SOURCES[2] = int(re.search(r'\d+', line).group())
+    f.close()
+
+    args = parse_args()
+    RECORD_MODE = args.record
 
     probe = cv2.VideoCapture(SOURCES[2])
     ok, first = probe.read()
     probe.release()
     if not ok:
         raise RuntimeError(f"Failed to read from camera source {SOURCES[0]}")
-
-    RAW_SHM_OBJS = []
-    ANN_SHM_OBJS = []
-    RAW_BUFS = []
-    ANN_BUFS = []
 
     for shape in SHAPES:
         H, W, C = shape
@@ -331,7 +450,7 @@ if __name__ == "__main__":
     for i, src in enumerate(SOURCES):
         p = Process(target=capture_worker, args=(i, src, SHAPES[i], RAW_SHM_OBJS[i].name,
                                                  RAW_LOCKS[i], RAW_READY[i],
-                                                 RAW_FRAME_ID[i], stop_event), daemon=True)
+                                                 RAW_FRAME_ID[i], stop_event), daemon=False)
         p.start()
         processes.append(p)
 
@@ -341,4 +460,37 @@ if __name__ == "__main__":
                                             MODEL_PATH, stop_event), daemon=True)
     t.start()
 
-    app.run(host="localhost", port=8000, use_reloader=False, threaded=True)
+    if RECORD_MODE:
+        print("Running in RECORD mode")
+
+        print("Waiting for cameras to initialize")
+        for i in range(len(SOURCES)):
+            while RAW_FRAME_ID[i].value == 0:
+                time.sleep(0.1)
+            print(f"Camera {i} ready")
+
+            while True:
+                with ANN_LOCKS[i]:
+                    ready = ANN_BUFS[i].any()
+                if ready:
+                    break
+                time.sleep(0.1)
+            print(f"Camera {i} inference ready")
+
+        record_threads = []
+        for i in range(len(SOURCES)):
+            t = Thread(target=record,
+                       args=(i, ANN_BUFS, ANN_LOCKS, stop_event),
+                       daemon=False)
+            t.start()
+            record_threads.append(t)
+
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("Stopping recording...")
+            stop_event.set()
+    else:
+        print("Running in STREAM mode")
+        app.run(host="localhost", port=8000, use_reloader=False, threaded=True)
