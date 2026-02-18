@@ -71,7 +71,7 @@ class Localization:
             # heading in radians
 
             with self.lock:
-                self.state = self.ekf.getstate()
+                self.state = self.ekf.x
 
             # Update if need
             time.sleep(0.5)
@@ -79,6 +79,7 @@ class Localization:
     def getstate(self):
         with self.lock:
             return self.state
+            #returns self.ekf.x
 
 
 

@@ -1,10 +1,6 @@
 import threading
-import time
 import board
 import adafruit_icm20x
-
-
-#not sure if rate_hz and application refresh rate should be the same
 
 #if need ax,ay,az (or other measurements)=> 
 #myimu = IMU()

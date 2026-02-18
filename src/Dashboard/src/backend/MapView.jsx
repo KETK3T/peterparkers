@@ -13,28 +13,66 @@ L.Icon.Default.mergeOptions({
 
 function LocationMarker() {
   const [position, setPosition] = useState(null);
+  const map = useMapEvents({});
+
+  useEffect(() => {
+    async function fetchState() {
+      try {
+        const response = await fetch("http://localhost:5000/state");
+        const data = await response.json();
+
+        const newPosition = [data.latitude, data.longitude];
+
+        setPosition(newPosition);
+        map.flyTo(newPosition, map.getZoom());
+
+      } catch (error) {
+        console.error("Error fetching state:", error);
+      }
+    }
+
+    const interval = setInterval(fetchState, 500);
+
+    return () => clearInterval(interval);
+  }, [map]);
+
+  return position ? (
+    <Marker position={position}>
+      <Popup>
+        Lat: {position[0]} <br />
+        Lon: {position[1]}
+      </Popup>
+    </Marker>
+  ) : null;
+}
+
+
+/*
+function LocationMarker() {
+  const [position, setPosition] = useState(null);
   const [bbox, setBbox] = useState([]);
 
-const map = useMapEvents({
-    // 2. Event that triggers when location is found
-    locationfound(e) {
-      // Set the marker position
-      setPosition(e.latlng);
+  const map = useMapEvents({
+      // 2. Event that triggers when location is found
+      locationfound(e) {
 
-      // Calculate and set the bounding box for zooming
-      setBbox(e.bounds.toBBoxString().split(",").map(Number));
+          // Set the marker position
+          setPosition(e.latlng);
 
-      // Automatically pan the map to the new location
-      map.flyTo(e.latlng, map.getZoom());
-      console.log("Location found:", e.latlng);
-    },
+          // Calculate and set the bounding box for zooming
+          setBbox(e.bounds.toBBoxString().split(",").map(Number));
 
-// 3. Event that triggers if location finding fails
-    locationerror(e) {
-        console.error("Location error:", e.message);
-        alert(`Location tracking failed: ${e.message}. Please ensure location services are enabled.`);
-    }
-  });
+          // Automatically pan the map to the new location
+          map.flyTo(e.latlng, map.getZoom());
+          console.log("Location found:", e.latlng);
+      },
+  
+  // 3. Event that triggers if location finding fails
+      locationerror(e) {
+          console.error("Location error:", e.message);
+          alert(`Location tracking failed: ${e.message}. Please ensure location services are enabled.`);
+      }
+    });
 
 useEffect(() => {
     // Starts the browser's location tracking
@@ -59,7 +97,7 @@ return () => {
       </Popup>
     </Marker>
   );
-}
+}*/
 
 export default function MapView() {
     return(
