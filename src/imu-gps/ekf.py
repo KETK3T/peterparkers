@@ -24,6 +24,7 @@ class EKF(ExtendedKalmanFilter):
         # Measurement noise (GPS) (R matrix), this will need to be adjusted to the GPS datasheets
         self.R = np.diag([3.0, 3.0])
 
+
     # Prediction step
     # dt is change in time, will use timestamps to calculate
     def predict_f(self, x, dt, ax, ay, gyro_z):
@@ -78,4 +79,4 @@ class EKF(ExtendedKalmanFilter):
             f"Heading: {self.x[4]:.3f} radians\n"
         )
 
-    
+

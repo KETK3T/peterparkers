@@ -5,6 +5,7 @@ from imu import IMU
 from gps import GPS
 import csv
 
+
 ekf = EKF()
 prev_time = time.time()
 myIMU = IMU()
@@ -18,7 +19,7 @@ with open("output.csv", "w", newline="", encoding="utf-8") as f:
     cWriter.writerow(["id", "latitude", "longitude", "x-velocity", "y-velocity", "heading"])
     count = 1 # csv row id
 
-while count < 10:
+while True:
     time.sleep(0.5)
     # IMU readings
     ax, ay, az = myIMU.accel
