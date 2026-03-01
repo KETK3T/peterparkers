@@ -4,7 +4,7 @@ import pynmea2
 import threading
 
 class GPS:
-    def __init__(self, rate_hz=5):
+    def __init__(self):
         self.ser = serial.Serial(
             port='/dev/ttyTHS1',  # Adjust this for your specific setup
             baudrate=9600,
@@ -14,7 +14,7 @@ class GPS:
             timeout=1  # Timeout in seconds
         )
 
-        self.rate = rate_hz
+        #self.rate = rate_hz # rate_hz=5 in init header
         self.running = True
 
         self.latitude = 0
@@ -37,7 +37,7 @@ class GPS:
 
     def update_loop(self):
         print("Serial port opened. Waiting for data...")
-        period = 1 / self.rate
+        #period = 1 / self.rate
         try:
             while self.running:
                 if self.ser.in_waiting > 0:
@@ -65,7 +65,7 @@ class GPS:
 
                     else:
                         print("No data recieved")
-                time.sleep(period)  # Small delay to prevent busy-waiting
+                #time.sleep(period)  # Small delay to prevent busy-waiting
 
         except Exception as e:
             print(f"An error occurred: {e}")

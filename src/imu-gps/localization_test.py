@@ -8,14 +8,14 @@ import threading
 class Localization:
     def __init__(self):
         self.ekf = EKF()
+        self.prev_time = time.time()
         self.myIMU = IMU()
         self.myGPS = GPS()
-
-        self.prev_time = time.time()
 
         self.state = None
         self.running = False
         self.lock = threading.Lock()
+        self.start() #put into a condition func, if sensors are good, then start
 
     def start(self):
         self.running = True

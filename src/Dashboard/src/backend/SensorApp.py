@@ -24,11 +24,11 @@ def get_sensor_state():
     state = myLocalization.getstate()
 
     state_dict = {
-        "longitude": float(state[0]),
-        "latitude": float(state[1]),
-        "velocity_x": float(state[2]),
-        "velocity_y": float(state[3]),
-        "heading": float(state[4])
+        "latitude": state[0],
+        "longitude": state[1],
+        "velocity_x": state[2],
+        "velocity_y": state[3],
+        "heading": state[4]
     }
 
     return jsonify(state_dict)
