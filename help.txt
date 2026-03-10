@@ -1,0 +1,102 @@
+mkdir [directoryname] - creates folder/directory
+touch [filename] - creates file
+python -m venv ~/Projects/icm20948-setup/venv
+ - creates a folder called venv and makes virtual environment
+source venv/bin/activate
+- activates the virtual environment
+deactivate - exits virtual environment
+requirements.txt:
+- activate venv
+- pip freeze > requirements.txt
+- pip install -r requirements.txt
+adafruit download:
+- pip install adafruit-blinka
+- pip install adafruit-circuitpython-icm20x
+
+Other library needed to install:
+- pip install RPi.GPIO
+
+To detect i2c:
+- i2cdetect -y 1
+
+
+for jetson detection
+- sudo i2cdetect -y -r 7
+- wires connected to gpio pin 3 and 5
+
+jtop
+- check resources on the jetson
+
+to activate the env
+- source ~/parker-env/bin/activate
+
+git commit -m "(context)"
+git push
+username and token (git-token.txt)
+
+to switch to branch
+- git switch "name of branch"
+- git checkout "name of branch"
+
+to create new branch 
+- got checkout -b "name of branch"
+
+DO NOT USE SUDO UPGRADE 
+
+to activate max gpu power
+- sudo jetson_clocks
+
+Setting up GPS:
+
+pip list
+- to show whats downloaded
+
+pip install pyserial
+pip install pynmea2
+
+enable serial port
+find what serial port points to:
+command: ls -l /dev/serial0
+(rasp points to ttyS0)
+
+Jetson config command:
+sudo /opt/nvidia/jetson-io/jetson-io.py
+
+jetson serial port for uart1: ttyTHS1
+if starting completely new, will need to adjust permissions
+
+Run code from parker-repo
+python3 src/imu-gps/test.py
+
+ctrl C
+
+How to run dashboard
+run flask app first 
+npm run dev
+click local server
+
+Sensor Testing Set Up:
+
+Backend:
+source ~/parker-env/bin/activate
+python ./src/Dashboard/src/backend/SensorApp-Test.py
+python ./src/Dashboard/src/backend/SensorApp.py
+click local server > Firefox
+
+Frontend:
+bash terminal
+cd src/Dashboard
+npm run dev
+click local server > Firefox
+
+Testing model and 3 cams:
+python ./src/Dashboard/src/backend/find_distance.py -r #Allows you to record
+(alt: -r, --record,  -R)
+
+python ./src/Dashboard/src/backend/find_distance.py -r -t #Allows you to see what is being recorded at the same time
+(alt: -r -T, --test)
+
+python ./src/Dashboard/src/backend/find_distance.py -r -a #Allows you to record the annotated version
+(alt: -a, -A, --annotate)
+Running it without args auto runs the server for streaming
+
