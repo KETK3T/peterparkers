@@ -1,45 +1,27 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import MapView from "./backend/MapView.jsx";
+import "./App.css";
+import axios from "axios"
 import team_logo from "./pictures/peter_parkers_logo.jpg";
-import './App.css';
-import Detailed from './components/Detailed.jsx';
-
-function AppContent() {
-  const location = useLocation();
-
-  const hideHeader =
-    location.pathname === "/detailed";
-
-  return (
-    <div className="app-container">
-      {!hideHeader && (
-        <header className="app-header">
-          <div className="header-logo">
-            <img src={team_logo} alt="Team Logo" className="logo-img" />
-          </div>
-
-          <h1 className="header-title">Parking Lot Scanner</h1>
-
-          <nav className="header-nav">
-            <Link to="/detailed" className="nav-link">
-              Click To View
-            </Link>
-          </nav>
-        </header>
-      )}
-
-      {/* Routing Section */}
-      <Routes>
-        <Route path="/detailed" element={<Detailed />} />
-      </Routes>
-    </div>
-  );
-}
 
 export default function App() {
+
   return (
-    <Router>
-      <AppContent />
-    </Router>
+
+
+    <div className="app-container">
+        <header className="app-header">
+            <div className="header-logo">
+                <img src={team_logo} alt="Team Logo" className="logo-img" />
+                <h1 className="header-title">Parking Lot Scanner</h1>
+            </div>
+        </header>
+
+        {/*Map View */}
+        <div className="map-section">
+          <MapView/>
+        </div>
+    </div>
   );
 }
