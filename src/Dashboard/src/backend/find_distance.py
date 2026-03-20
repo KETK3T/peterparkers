@@ -57,7 +57,7 @@ CAP_W, CAP_H = 640, 480
 DISP_W, DISP_H = 640, 480
 CAP_SHAPE = (CAP_H, CAP_W, 3)
 DISP_SHAPE = (DISP_H, DISP_W, 3)
-SOURCES = [0, 0, 0]
+SOURCES = [0, 0]
 CAPTURE_FPS = 15
 INFERENCEFPS = 15
 IMGSZ = 160
@@ -65,9 +65,9 @@ CONF = 0.20
 MODEL_PATH = "./models/yolo11n.engine"
 MAX_BATCH = 3
 CLASSES = [2, 3, 5, 7]
-CAM_ORDER = ['Front', 'Left', 'Right']
-DISPLAY_ORDER = [1,0,2]
-INF_IDX = [1, 2]
+CAM_ORDER = ['Left', 'Right']
+DISPLAY_ORDER = [1,0]
+INF_IDX = [0, 1]
 SPOT_CAMS = {'Left', 'Right'}
 MIN_BOX_H = {'Left': 30, 'Right': 30}  # Ignore detections smaller than this
 INTERSECT_ALLOWANCE = 0.10
@@ -239,8 +239,8 @@ def capture_worker(cam_id: int, src: int, raw_shm_name: str, raw_lock, raw_frame
     cap = cv2.VideoCapture(src, cv2.CAP_V4L2)
 
     if cam_id == 0:
-        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-        cap.set(cv2.CAP_PROP_FPS, 30)
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
+        cap.set(cv2.CAP_PROP_FPS, CAPTURE_FPS)
     else:
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
         cap.set(cv2.CAP_PROP_FPS, CAPTURE_FPS)
@@ -260,7 +260,7 @@ def capture_worker(cam_id: int, src: int, raw_shm_name: str, raw_lock, raw_frame
     shm = SharedMemory(name=raw_shm_name)
     buf = shm_ndarray(shm, CAP_SHAPE)
 
-    skip = 2 if cam_id == 0 else 1
+    skip = 1
     counter = 0
     local_id = 0
 
@@ -408,14 +408,15 @@ def display_loop(stop_event):
         panels = []
         for i in DISPLAY_ORDER:
             cam_name = CAM_ORDER[i]
+            """
             if i == 0:
                 with RAW_LOCKS[i]:
                     raw = RAW_BUFS[i].copy()
                 panel = cv2.resize(raw, (DISP_W, DISP_H), interpolation=cv2.INTER_NEAREST)
-            else:
-                with ANN_LOCKS[i]:
-                    panel = ANN_BUFS[i].copy()
-
+            """
+            with ANN_LOCKS[i]:
+                panel = ANN_BUFS[i].copy()
+            
             cv2.putText(panel, cam_name, (10, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 230, 200), 2, cv2.LINE_AA)
 
             if cam_name in SPOT_CAMS:
@@ -521,17 +522,14 @@ if __name__ == "__main__":
             if not line:
                 break
 
-            if 'Arducam_12MP' in line:
-                line = f.readline()
-                SOURCES[0] = int(re.search(r'\d+', line).group())
-            elif 'Arducam USB Camera' in line:
+            if 'Arducam USB Camera' in line:
                 port = float(re.search(r'\d+\.\d+', line).group())
                 line = f.readline()
                 idx = int(re.search(r'\d+', line).group())
                 if port == usb_1:
-                    SOURCES[1] = idx
+                    SOURCES[0] = idx
                 elif port == usb_2:
-                    SOURCES[2] = idx
+                    SOURCES[1] = idx
 
     if len(set(SOURCES)) != len(SOURCES):
         raise RuntimeError(f"Camera detection failed - possible duplicate sources: {SOURCES}")
@@ -543,7 +541,7 @@ if __name__ == "__main__":
         if not ok:
             raise RuntimeError(f'Cannot read from camera source {src}')
 
-    for _ in range(3):
+    for _ in range(len(SOURCES)):
         raw = SharedMemory(create=True, size=CAP_H * CAP_W * 3)
         ann = SharedMemory(create=True, size=DISP_H * DISP_W * 3)
         RAW_SHM_OBJS.append(raw)
@@ -555,9 +553,9 @@ if __name__ == "__main__":
     for buf in ANN_BUFS:
         buf[:] = 0
 
-    RAW_LOCKS = [Lock() for _ in range(3)]
-    ANN_LOCKS = [Lock() for _ in range(3)]
-    RAW_FRAME_ID = [Value('i', 0) for _ in range(3)]
+    RAW_LOCKS = [Lock() for _ in range(len(SOURCES))]
+    ANN_LOCKS = [Lock() for _ in range(len(SOURCES))]
+    RAW_FRAME_ID = [Value('i', 0) for _ in range(len(SOURCES))]
 
     for i, src in enumerate(SOURCES):
         p = Process(
@@ -580,7 +578,7 @@ if __name__ == "__main__":
     inf_t.start()
 
     print("Waiting for cameras...")
-    for i in range(3):
+    for i in range(len(SOURCES)):
         while RAW_FRAME_ID[i].value == 0:
             time.sleep(0.1)
         print(f'Camera {i} ({CAM_ORDER[i]}) ready')
