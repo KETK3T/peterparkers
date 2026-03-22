@@ -14,6 +14,15 @@ core 3 - cam 2
 core 4 - inference thread
 core 5 - Display and record
 
+ROI Editor (requires -T/-t / --test):
+  Press I         Toggle ROI editor mode on/off
+  Left click      Add a point to the current polygon
+  Right click     Undo the last point
+  Enter           Finish current polygon and print to terminal
+  Backspace       Clear all points for the current polygon
+  Tab             Cycle the active camera (Left / Right)
+  Q               Quit (same as normal)
+
 PLEASE LOOK AT THE WARNINGS!!!
 """
 
@@ -35,15 +44,28 @@ import threading
 from datetime import datetime
 import argparse
 import signal
+import subprocess
 
 # ── Env / torch tuning ────────────────────────────────────────────────────────
 os.environ['CUDA_LAUNCH_BLOCKING'] = '0'
 os.environ['OPENCV_VIDEOIO_PRIORITY_GSTREAMER'] = '0'
-torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.benchmark = True
 torch.backends.cudnn.enabled = True
-torch.set_num_threads(2)
-cv2.setNumThreads(2)
+torch.set_num_threads(1)
+cv2.setNumThreads(1)
 
+
+def set_jetson_clocks(enable: bool):
+    try:
+        if enable:
+            subprocess.run(['sudo', 'jetson_clocks', '--store', JETSON_CLOCKS_CONF], check=True)
+            subprocess.run(['sudo', 'jetson_clocks'], check=True)
+            print("\033[1;91mWarning: [SYSTEM] JETSON CLOCKS LOCKED\033[0m")
+        else:
+            subprocess.run(['sudo','jetson_clocks','--restore', JETSON_CLOCKS_CONF],check=True)
+            print("\033[1;91mWarning: [SYSTEM] JETSON CLOCKS RESTORED\033[0m")
+    except Exception as e:
+        print(f"\033[1;91mWarning: [SYSTEM] JETSON CLOCKS FAILED: {e}\033[0m")
 
 def parse_args():
     p = argparse.ArgumentParser(description="Parking Finder")
@@ -52,17 +74,19 @@ def parse_args():
     p.add_argument("-A", "-a", "--annotate", action="store_true", help="Records the annotated version (requires -r)")
     return p.parse_args()
 
-
+JETSON_CLOCKS_CONF = '/tmp/jetson_clocks_backup.conf'
 CAP_W, CAP_H = 640, 480
 DISP_W, DISP_H = 640, 480
 CAP_SHAPE = (CAP_H, CAP_W, 3)
 DISP_SHAPE = (DISP_H, DISP_W, 3)
-SOURCES = [0, 0]
-CAPTURE_FPS = 15
-INFERENCEFPS = 15
+SOURCES = [0, 0] #Left, Right
+CAPTURE_FPS = 30
+INFERENCEFPS = 30
 IMGSZ = 160
 CONF = 0.20
 MODEL_PATH = "./models/yolo11n.engine"
+# MODEL_PATH = "./yolo11n.pt"
+
 MAX_BATCH = 3
 CLASSES = [2, 3, 5, 7]
 CAM_ORDER = ['Left', 'Right']
@@ -74,19 +98,15 @@ INTERSECT_ALLOWANCE = 0.10
 
 ROIS = {
     'Left': [
-        {'id': 'L1', 'poly': [(1, 261), (98, 219), (144, 222), (3, 303)]},
-        {'id': 'L2', 'poly': [(1, 303), (144, 222), (192, 228), (62, 358), (0, 357)]},
-        {'id': 'L3', 'poly': [(193, 225), (62, 359), (242, 359), (294, 225)]},
-        {'id': 'L4', 'poly': [(293, 224), (243, 358), (449, 359), (379, 223)]},
-        {'id': 'L5', 'poly': [(378, 222), (449, 359), (638, 357), (638, 338), (454, 222)]},
-        {'id': 'L6', 'poly': [(453, 221), (637, 338), (638, 263), (529, 219)]},
+        {'id': 'L1', 'poly': [(471, 309), (562, 363), (468, 383), (405, 318)]},
+        {'id': 'L2', 'poly': [(320, 319), (402, 316), (465, 384), (330, 395)]},
+        {'id': 'L3', 'poly': [(319, 319), (326, 395), (187, 392), (238, 318)]},
+        {'id': 'L4', 'poly': [(235, 317), (183, 390), (78, 376), (161, 314)]},
+        {'id': 'L5', 'poly': [(100, 310), (158, 314), (76, 373), (8, 356)]},
+        {'id': 'L6', 'poly': [(474, 310), (560, 361), (616, 345), (538, 303)]}
     ],
     'Right': [
-        {'id': 'R1', 'poly': [(0, 247), (80, 218), (166, 240), (111, 285), (100, 295), (0, 350)]},
-        {'id': 'R2', 'poly': [(164, 238), (96, 298), (0, 347), (0, 355), (234, 357), (303, 258)]},
-        {'id': 'R3', 'poly': [(302, 258), (234, 358), (445, 358), (414, 268)]},
-        {'id': 'R4', 'poly': [(413, 265), (445, 358), (603, 359), (525, 272)]},
-        {'id': 'R5', 'poly': [(525, 270), (604, 359), (638, 358), (638, 277)]},
+
     ],
 }
 
@@ -150,30 +170,47 @@ def check_parking_spots(cam_name: str, disp_boxes: list):
     min_h = MIN_BOX_H.get(cam_name, 0)
     states = []
 
+    occupied_pixels = np.zeros((DISP_H,DISP_W), dtype=np.uint8)
+
+    for box in disp_boxes:
+        x1,y1,x2,y2 = box
+
+        if(y2-y1) < min_h:
+            continue
+
+        x1,y1 = max(0,int(x1)), max(0,int(y1))
+        x2,y2 = min(DISP_W,int(x2)), min(DISP_H,int(y2))
+        if x2 > x1 and y2 > y1:
+            occupied_pixels[y1:y2, x1:x2] = 1
+
     for mask in masks:
-        occupied = False
-        for box in disp_boxes:
-            x1, y1, x2, y2 = box
+        overlap = np.count_nonzero(occupied_pixels & mask)
+        states.append('Car' if overlap >= mask.sum() * INTERSECT_ALLOWANCE else 'Empty')
 
-            # skip small boxes
-            if (y2 - y1) < min_h:
-                continue
-
-            x1 = max(0, int(x1))
-            y1 = max(0, int(y1))
-            x2 = min(DISP_W, int(x2))
-            y2 = min(DISP_H, int(y2))
-
-            if x2 <= x1 or y2 <= y1:
-                continue
-
-            roi = mask[y1:y2, x1:x2]
-
-            if roi.sum() >= roi.size * INTERSECT_ALLOWANCE:
-                occupied = True
-                break
-
-        states.append('Car' if occupied else 'Empty')
+    # for mask in masks:
+    #     occupied = False
+    #     for box in disp_boxes:
+    #         x1, y1, x2, y2 = box
+    #
+    #         # skip small boxes
+    #         if (y2 - y1) < min_h:
+    #             continue
+    #
+    #         x1 = max(0, int(x1))
+    #         y1 = max(0, int(y1))
+    #         x2 = min(DISP_W, int(x2))
+    #         y2 = min(DISP_H, int(y2))
+    #
+    #         if x2 <= x1 or y2 <= y1:
+    #             continue
+    #
+    #         roi = mask[y1:y2, x1:x2]
+    #
+    #         if roi.sum() >= roi.size * INTERSECT_ALLOWANCE:
+    #             occupied = True
+    #             break
+    #
+    #     states.append('Car' if occupied else 'Empty')
 
     with store_lock:
         spot_states[cam_name] = states
@@ -231,19 +268,234 @@ def draw_spot_overlays(frame: np.ndarray, cam_name: str) -> np.ndarray:
     return cv2.addWeighted(overlay, SPOT_ALPHA, frame, 1 - SPOT_ALPHA, 0)
 
 
+# ── ROI Editor state ──────────────────────────────────────────────────────────
+
+class ROIEditor:
+    """
+    Interactive polygon editor. Lives entirely in the display thread.
+
+    Controls (active when editor_mode=True):
+      Left click   - add point
+      Right click  - undo last point
+      Enter        - finish polygon, print to terminal
+      Backspace    - clear current polygon
+      Tab          - cycle active camera
+      I            - toggle editor on/off
+    """
+
+    POINT_COLOR   = (0,   255, 255)   # cyan dots
+    LINE_COLOR    = (0,   200, 255)   # cyan-ish edges
+    CLOSE_COLOR   = (180, 0,   255)   # purple closing edge
+    FILL_COLOR    = (0,   180, 255)   # translucent fill
+    CURSOR_COLOR  = (200, 200, 200)   # crosshair
+    TEXT_COLOR    = (255, 255, 255)
+    SHADOW_COLOR  = (0,   0,   0)
+
+    def __init__(self):
+        self.editor_mode: bool = False
+        self.points: list[tuple[int, int]] = []
+        self.mouse_pos: tuple[int, int] = (0, 0)
+        # Which camera panel the user is editing (index into DISPLAY_ORDER)
+        self.cam_panel_idx: int = 0
+        # Running count per camera so auto-IDs don't repeat within a session
+        self._spot_counters: dict[str, int] = {c: len(ROIS.get(c, [])) for c in CAM_ORDER}
+
+    # ── property helpers ──────────────────────────────────────────────────────
+
+    @property
+    def active_cam(self) -> str:
+        return CAM_ORDER[DISPLAY_ORDER[self.cam_panel_idx]]
+
+    def _next_id(self, cam: str) -> str:
+        self._spot_counters[cam] += 1
+        prefix = cam[0].upper()
+        return f"{prefix}{self._spot_counters[cam]}"
+
+    # ── mouse callback ────────────────────────────────────────────────────────
+
+    def mouse_cb(self, event, x, y, flags, param):
+        """OpenCV mouse callback (runs in display thread)."""
+        if not self.editor_mode:
+            return
+
+        # x is in the stitched window; clamp to the active panel column
+        panel_w = DISP_W
+        # left panel = DISPLAY_ORDER[0], right panel = DISPLAY_ORDER[1]
+        # we only care about the panel that matches self.cam_panel_idx
+        col_start = self.cam_panel_idx * panel_w
+        col_end   = col_start + panel_w
+
+        # Track mouse regardless of which panel (for crosshair)
+        self.mouse_pos = (x, y)
+
+        if event == cv2.EVENT_LBUTTONDOWN:
+            if col_start <= x < col_end:
+                # Convert to panel-local coordinates
+                lx = x - col_start
+                self.points.append((lx, y))
+
+        elif event == cv2.EVENT_RBUTTONDOWN:
+            if self.points:
+                self.points.pop()
+
+    # ── keyboard handling ─────────────────────────────────────────────────────
+
+    def handle_key(self, key: int) -> bool:
+        """
+        Process a keypress.
+        Returns True if the key was consumed (caller should not process further).
+        Returns False if the key should be handled by the normal display loop.
+        """
+        if key == ord('i') or key == ord('I'):
+            self.editor_mode = not self.editor_mode
+            if self.editor_mode:
+                print(f"\n[ROI Editor] ON  — camera: {self.active_cam}")
+                print("  Left-click to add points  |  Right-click to undo")
+                print("  Enter = finish polygon    |  Backspace = clear")
+                print("  Tab = switch camera       |  I = exit editor\n")
+            else:
+                print("[ROI Editor] OFF")
+                self.points.clear()
+            return True  # consume 'i' so it doesn't quit via 'q' check
+
+        if not self.editor_mode:
+            return False
+
+        # Enter — finish polygon
+        if key in (13, 10):  # CR or LF
+            self._finish_polygon()
+            return True
+
+        # Backspace — clear
+        if key == 8:
+            self.points.clear()
+            print("[ROI Editor] Points cleared")
+            return True
+
+        # Tab — cycle camera
+        if key == 9:
+            self.cam_panel_idx = (self.cam_panel_idx + 1) % len(DISPLAY_ORDER)
+            self.points.clear()
+            print(f"[ROI Editor] Active camera: {self.active_cam}  (points cleared)")
+            return True
+
+        return False
+
+    def _finish_polygon(self):
+        if len(self.points) < 3:
+            print(f"[ROI Editor] Need at least 3 points (have {len(self.points)})")
+            return
+
+        cam  = self.active_cam
+        sid  = self._next_id(cam)
+        poly = list(self.points)
+
+        print(f"\n# ── ROI output ──────────────────────────────────────────")
+        print(f"# Camera : {cam}   ID : {sid}")
+        print(f"{{'id': '{sid}', 'poly': {poly}}},")
+        print(f"# ─────────────────────────────────────────────────────────\n")
+
+        self.points.clear()
+
+    def draw_overlay(self, canvas: np.ndarray):
+        if not self.editor_mode:
+            return
+
+        num_panels = len(DISPLAY_ORDER)
+        panel_w    = DISP_W
+        col_start  = self.cam_panel_idx * panel_w
+
+        # ── translucent panel highlight ───────────────────────────────────────
+        overlay = canvas.copy()
+        cv2.rectangle(overlay, (col_start, 0), (col_start + panel_w, DISP_H),
+                      (0, 60, 100), -1)
+        cv2.addWeighted(overlay, 0.15, canvas, 0.85, 0, canvas)
+
+        mx, my = self.mouse_pos
+        cv2.line(canvas, (mx, 0), (mx, DISP_H), self.CURSOR_COLOR, 1, cv2.LINE_AA)
+        cv2.line(canvas, (0, my), (canvas.shape[1], my), self.CURSOR_COLOR, 1, cv2.LINE_AA)
+
+        canvas_pts = [(col_start + px, py) for (px, py) in self.points]
+
+        if len(canvas_pts) >= 3:
+            fill_overlay = canvas.copy()
+            cv2.fillPoly(fill_overlay,
+                         [np.array(canvas_pts, dtype=np.int32)],
+                         self.FILL_COLOR)
+            cv2.addWeighted(fill_overlay, 0.25, canvas, 0.75, 0, canvas)
+
+        for i in range(1, len(canvas_pts)):
+            cv2.line(canvas, canvas_pts[i-1], canvas_pts[i],
+                     self.LINE_COLOR, 2, cv2.LINE_AA)
+
+        if len(canvas_pts) >= 3:
+            p0, pn = canvas_pts[0], canvas_pts[-1]
+
+            dx = p0[0] - pn[0]; dy = p0[1] - pn[1]
+            dist = max(1, int((dx**2 + dy**2) ** 0.5))
+            segs = max(4, dist // 10)
+            for s in range(segs):
+                if s % 2 == 0:
+                    t0 = s     / segs
+                    t1 = (s+1) / segs
+                    pt0 = (int(pn[0] + dx*t0), int(pn[1] + dy*t0))
+                    pt1 = (int(pn[0] + dx*t1), int(pn[1] + dy*t1))
+                    cv2.line(canvas, pt0, pt1, self.CLOSE_COLOR, 2, cv2.LINE_AA)
+
+        for idx, (cx, cy) in enumerate(canvas_pts):
+            cv2.circle(canvas, (cx, cy), 5, self.POINT_COLOR, -1, cv2.LINE_AA)
+            cv2.circle(canvas, (cx, cy), 5, (0, 0, 0), 1, cv2.LINE_AA)
+            lbl = str(idx)
+            (tw, th), _ = cv2.getTextSize(lbl, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
+            cv2.putText(canvas, lbl, (cx + 7, cy + 4),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, self.SHADOW_COLOR, 2, cv2.LINE_AA)
+            cv2.putText(canvas, lbl, (cx + 7, cy + 4),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, self.POINT_COLOR,  1, cv2.LINE_AA)
+
+        hud_lines = [
+            f"ROI EDITOR  |  cam: {self.active_cam}  |  pts: {len(self.points)}",
+            "LClick=add  RClick=undo  Enter=done  Bksp=clear  Tab=cam  I=exit",
+        ]
+        for li, line in enumerate(hud_lines):
+            yy = DISP_H - 12 - (len(hud_lines) - 1 - li) * 18
+            (tw, th), _ = cv2.getTextSize(line, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)
+            cv2.rectangle(canvas,
+                          (col_start + 4, yy - th - 4),
+                          (col_start + tw + 10, yy + 4),
+                          (10, 10, 10), -1)
+            cv2.putText(canvas, line,
+                        (col_start + 7, yy),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, self.TEXT_COLOR, 1, cv2.LINE_AA)
+
+        if col_start <= mx < col_start + panel_w:
+            lx = mx - col_start
+            tip = f"({lx}, {my})"
+            (tw, th), _ = cv2.getTextSize(tip, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
+            tx = min(mx + 10, canvas.shape[1] - tw - 6)
+            ty = max(my - 10, th + 4)
+            cv2.rectangle(canvas, (tx - 2, ty - th - 2), (tx + tw + 2, ty + 2),
+                          (20, 20, 20), -1)
+            cv2.putText(canvas, tip, (tx, ty),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, self.TEXT_COLOR, 1, cv2.LINE_AA)
+
+roi_editor = ROIEditor()
+
+
 def capture_worker(cam_id: int, src: int, raw_shm_name: str, raw_lock, raw_frame_id, stop_event):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     os.environ['OPENBLAS_NUM_THREADS'] = '2'
     os.environ['MALLOC_TRIM_THRESHOLD_'] = '100000'
 
     cap = cv2.VideoCapture(src, cv2.CAP_V4L2)
+    # cap = cv2.VideoCapture(src)
+
 
     if cam_id == 0:
-        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
-        cap.set(cv2.CAP_PROP_FPS, CAPTURE_FPS)
+      cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
+      cap.set(cv2.CAP_PROP_FPS, CAPTURE_FPS)
     else:
-        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
-        cap.set(cv2.CAP_PROP_FPS, CAPTURE_FPS)
+      cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
+      cap.set(cv2.CAP_PROP_FPS, CAPTURE_FPS)
 
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # only keep most recent frame
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAP_W)
@@ -300,13 +552,13 @@ def inference_loop(need_annotations: bool, stop_event):
         model.fuse()
 
     dummy = np.zeros((IMGSZ, IMGSZ, 3), dtype=np.uint8)
-    model.predict([dummy] * MAX_BATCH, imgsz=IMGSZ, conf=CONF, verbose=False, device='cuda', half=True)
+    model.predict([dummy] * MAX_BATCH, imgsz=IMGSZ, conf=CONF,device='cuda', verbose=False, half=True)
     print('[Inference] warm-up done')
 
     sx = DISP_W / IMGSZ
     sy = DISP_H / IMGSZ
 
-    last_seen = [0] * 3
+    last_seen = [0] * 2
     frame_time = 1.0 / INFERENCEFPS
     last_time = 0.0
 
@@ -345,7 +597,7 @@ def inference_loop(need_annotations: bool, stop_event):
             padded.append(np.zeros((IMGSZ, IMGSZ, 3), dtype=np.uint8))
 
         try:
-            results = model.predict(padded, imgsz=IMGSZ, conf=CONF, classes=CLASSES, verbose=False, device='cuda',
+            results = model.predict(padded, imgsz=IMGSZ, conf=CONF,device='cuda', classes=CLASSES, verbose=False,
                                     half=True)
 
             for result, i, raw_full in zip(results, valid_indices, raw_full_list):
@@ -385,7 +637,8 @@ def inference_loop(need_annotations: bool, stop_event):
 
 def display_loop(stop_event):
     """
-        Displays what the cams see
+    Displays what the cams see.
+    Press I to toggle the interactive ROI editor.
     """
 
     try:
@@ -393,8 +646,12 @@ def display_loop(stop_event):
     except Exception:
         pass
 
-    cv2.namedWindow('Parking Finder', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('Parking Finder', DISP_W * 3, DISP_H)
+    win = 'Parking Finder'
+    cv2.namedWindow(win, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(win, DISP_W * len(DISPLAY_ORDER), DISP_H)
+
+    # Register the ROI editor mouse callback on the window
+    cv2.setMouseCallback(win, roi_editor.mouse_cb)
 
     frame_time = 1.0 / 30
     last_time = 0.0
@@ -408,15 +665,9 @@ def display_loop(stop_event):
         panels = []
         for i in DISPLAY_ORDER:
             cam_name = CAM_ORDER[i]
-            """
-            if i == 0:
-                with RAW_LOCKS[i]:
-                    raw = RAW_BUFS[i].copy()
-                panel = cv2.resize(raw, (DISP_W, DISP_H), interpolation=cv2.INTER_NEAREST)
-            """
             with ANN_LOCKS[i]:
                 panel = ANN_BUFS[i].copy()
-            
+
             cv2.putText(panel, cam_name, (10, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 230, 200), 2, cv2.LINE_AA)
 
             if cam_name in SPOT_CAMS:
@@ -428,12 +679,26 @@ def display_loop(stop_event):
 
             panels.append(panel)
 
-        cv2.imshow('Parking Finder', np.hstack(panels))
+        # Stitch panels side by side
+        canvas = np.hstack(panels)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        # Draw ROI editor overlay on the stitched canvas
+        roi_editor.draw_overlay(canvas)
+
+        cv2.imshow(win, canvas)
+
+        key = cv2.waitKey(1) & 0xFF
+
+        # Let the editor consume the key first
+        if roi_editor.handle_key(key):
+            continue
+
+        if key == ord('q'):
             stop_event.set()
             break
+
         last_time = now
+
     cv2.destroyAllWindows()
 
 
@@ -503,36 +768,37 @@ def shutdown():
             shm.unlink()
         except Exception:
             pass
-
+    set_jetson_clocks(False)
     print('Done')
 
 
 if __name__ == "__main__":
     args = parse_args()
     _MAIN_PID = os.getpid()
+    set_jetson_clocks(True)
     if args.annotate and not args.record:
         print("\033[1;91mWarning: -a/-A/--annotate has no effect without -r/-R/--record\033[0m")
     need_annotation = args.test or args.record
     os.system('v4l2-ctl --list-devices > camInfo.txt')
     with open('camInfo.txt') as f:
-        usb_1 = 2.1
-        usb_2 = 2.2
-        while True:
-            line = f.readline()
-            if not line:
-                break
+      usb_1 = 2.1
+      usb_2 = 2.2
+      while True:
+          line = f.readline()
+          if not line:
+              break
 
-            if 'Arducam USB Camera' in line:
-                port = float(re.search(r'\d+\.\d+', line).group())
-                line = f.readline()
-                idx = int(re.search(r'\d+', line).group())
-                if port == usb_1:
-                    SOURCES[0] = idx
-                elif port == usb_2:
-                    SOURCES[1] = idx
+          if 'Arducam USB Camera' in line:
+              port = float(re.search(r'\d+\.\d+', line).group())
+              line = f.readline()
+              idx = int(re.search(r'\d+', line).group())
+              if port == usb_1:
+                  SOURCES[0] = idx
+              elif port == usb_2:
+                  SOURCES[1] = idx
 
     if len(set(SOURCES)) != len(SOURCES):
-        raise RuntimeError(f"Camera detection failed - possible duplicate sources: {SOURCES}")
+      raise RuntimeError(f"Camera detection failed - possible duplicate sources: {SOURCES}")
 
     for src in SOURCES:
         probe = cv2.VideoCapture(src)

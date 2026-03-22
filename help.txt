@@ -95,6 +95,7 @@ python ./src/Dashboard/src/backend/find_distance.py -r #Allows you to record
 
 python ./src/Dashboard/src/backend/find_distance.py -r -t #Allows you to see what is being recorded at the same time
 (alt: -r -T, --test)
+While running in test mode the 'I' key starts the ROI editor to manually select ROI mask dimensions
 
 python ./src/Dashboard/src/backend/find_distance.py -r -a #Allows you to record the annotated version
 (alt: -a, -A, --annotate)
