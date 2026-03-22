@@ -13,13 +13,13 @@ myGPS = GPS()
 
 # For creating test data
 # Creates a new CSV file and prints headers, file closes before while loop
-'''
+
 with open("output.csv", "w", newline="", encoding="utf-8") as f:
     cWriter = csv.writer(f)
 
-    cWriter.writerow(["id", "latitude", "longitude", "x-velocity", "y-velocity", "heading"])
+    cWriter.writerow(["id", "latitude", "longitude", "x-velocity", "y-velocity", "heading", "gps-lat", "gps-long", "dt"])
     count = 1 # csv row id
-'''
+
 while True:
     time.sleep(0.5)
     # IMU readings
@@ -68,10 +68,9 @@ while True:
     # heading in radians
     print(ekf)
 
-    '''
-    # File is reopened each file loop in append mode so that data can be added in a new line
+
+    #File is reopened each file loop in append mode so that data can be added in a new line
     with open("output.csv", "a", newline="", encoding="utf-8") as f:
         cWriter = csv.writer(f)
-        cWriter.writerow([count, ekf.x[0], ekf.x[1], ekf.x[2], ekf.x[3], ekf.x[4]])
+        cWriter.writerow([count, ekf.x[0], ekf.x[1], ekf.x[2], ekf.x[3], ekf.x[4], myGPS.get_lat(), myGPS.get_long(),dt])
         count += 1
-    '''
