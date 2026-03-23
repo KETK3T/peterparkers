@@ -56,8 +56,8 @@ class GPS:
                                 '''
                                 # print(f"Received: {data}")
 
-                                self.latitude = round(msg.latitude, 6)
-                                self.longitude = round(msg.longitude, 6)
+                                self.latitude = msg.latitude
+                                self.longitude = msg.longitude
                                 self.altitude = msg.altitude
 
                             except Exception as e:

@@ -4,23 +4,31 @@ from ekf import EKF
 from imu import IMU
 from gps import GPS
 import csv
-
+from datetime import datetime
+import os
 
 ekf = EKF()
 prev_time = time.time()
 myIMU = IMU()
 myGPS = GPS()
+tot_time = 0
+
 
 # For creating test data
 # Creates a new CSV file and prints headers, file closes before while loop
 
-with open("output.csv", "w", newline="", encoding="utf-8") as f:
+timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+os.makedirs('output', exist_ok=True)
+path = f"output/output_{timestamp}.csv"
+count = 1 # csv row id
+
+with open(path, "w", newline="", encoding="utf-8") as f:
     cWriter = csv.writer(f)
+    cWriter.writerow(["id", "latitude", "longitude", "x-velocity", "y-velocity", "heading", "gps-lat", "gps-long", "tot-time", "dt"])
 
-    cWriter.writerow(["id", "latitude", "longitude", "x-velocity", "y-velocity", "heading", "gps-lat", "gps-long", "dt"])
-    count = 1 # csv row id
-
+print(f"Saving to: {path}")
 while True:
+
     time.sleep(0.5)
     # IMU readings
     ax, ay, az = myIMU.accel
@@ -70,7 +78,10 @@ while True:
 
 
     #File is reopened each file loop in append mode so that data can be added in a new line
-    with open("output.csv", "a", newline="", encoding="utf-8") as f:
+    with open(path, "a", newline="", encoding="utf-8") as f:
         cWriter = csv.writer(f)
-        cWriter.writerow([count, ekf.x[0], ekf.x[1], ekf.x[2], ekf.x[3], ekf.x[4], myGPS.get_lat(), myGPS.get_long(),dt])
+        cWriter.writerow([count, ekf.x[0], ekf.x[1], ekf.x[2], ekf.x[3], ekf.x[4], myGPS.get_lat(), myGPS.get_long(),tot_time,dt])
         count += 1
+
+    tot_time += dt
+
