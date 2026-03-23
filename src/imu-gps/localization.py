@@ -24,7 +24,9 @@ count = 1 # csv row id
 
 with open(path, "w", newline="", encoding="utf-8") as f:
     cWriter = csv.writer(f)
-    cWriter.writerow(["id", "latitude", "longitude", "x-velocity", "y-velocity", "heading", "gps-lat", "gps-long", "tot-time", "dt"])
+    cWriter.writerow(["id", "latitude", "longitude", "x-velocity", "y-velocity", "heading",
+                      "gps-lat", "gps-long", "tot-time", "dt", "imu-ax", "imu-ay", "imu-az",
+                      "imu-gx","imu-gy","imu-gz",])
 
 print(f"Saving to: {path}")
 while True:
@@ -80,7 +82,9 @@ while True:
     #File is reopened each file loop in append mode so that data can be added in a new line
     with open(path, "a", newline="", encoding="utf-8") as f:
         cWriter = csv.writer(f)
-        cWriter.writerow([count, ekf.x[0], ekf.x[1], ekf.x[2], ekf.x[3], ekf.x[4], myGPS.get_lat(), myGPS.get_long(),tot_time,dt])
+        cWriter.writerow([count, ekf.x[0], ekf.x[1], ekf.x[2], ekf.x[3], ekf.x[4], myGPS.get_lat(), myGPS.get_long(),tot_time,dt,
+                          myIMU.get_accel()[0], myIMU.get_accel()[1], myIMU.get_accel()[2], myIMU.get_gyro()[0],
+                          myIMU.get_gyro()[1], myIMU.get_gyro()[2]])
         count += 1
 
     tot_time += dt
