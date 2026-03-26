@@ -85,6 +85,7 @@ click local server > Firefox
 
 Frontend:
 bash terminal
+python ./src/Dashboard/src/backend/server.py
 cd src/Dashboard
 npm run dev
 click local server > Firefox
