@@ -779,8 +779,8 @@ if __name__ == "__main__":
     if args.annotate and not args.record:
         print("\033[1;91mWarning: -a/-A/--annotate has no effect without -r/-R/--record\033[0m")
     need_annotation = args.test or args.record
-    os.system('v4l2-ctl --list-devices > camInfo.txt')
-    with open('camInfo.txt') as f:
+    os.system('v4l2-ctl --list-devices > ./utils/camInfo.txt')
+    with open('./utils/camInfo.txt') as f:
       usb_1 = 2.1
       usb_2 = 2.2
       while True:

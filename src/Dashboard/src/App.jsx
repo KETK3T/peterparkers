@@ -1,9 +1,7 @@
-import { useNavigate } from "react-router-dom";
-import React, { useState, useEffect } from "react";
-import MapView from "./backend/MapView.jsx";
+import React from "react";
+import MapView from "./frontend/MapView.jsx";
 import "./App.css";
-import axios from "axios"
-import team_logo from "./pictures/peter_parkers_logo.jpg";
+import team_logo from "./assets/peter_parkers_logo.jpg";
 
 export default function App() {
 
