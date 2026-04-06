@@ -3,7 +3,7 @@ import numpy as np
 #from ekf import EKF
 from imu import IMU
 from gps import GPS
-from test_efk import EKF
+from test_ekf import EKF
 import csv
 from datetime import datetime
 import os
@@ -60,7 +60,7 @@ count = 1 # csv row id
 
 with open(path, "w", newline="", encoding="utf-8") as f:
     cWriter = csv.writer(f)
-    cWriter.writerow(["id", "latitude", "longitude", "x-velocity", "y-velocity", "heading",
+    cWriter.writerow(["id", "latitude", "longitude", "speed", "heading",
                       "gps-lat", "gps-long", "tot-time", "dt", "imu-ax", "imu-ay", "imu-az",
                       "imu-gx","imu-gy","imu-gz",])
 
@@ -133,17 +133,34 @@ lat_init = np.radians(lat_init)
 long_init = np.radians(long_init)
 
 while True:
+    #current_time = time.time()
     current_time = time.time()
+    dt = current_time - prev_time
+    prev_time = current_time
 
-    accel = np.array([myIMU.get_accel()[0], myIMU.get_accel()[1]])
-    omega_z = myIMU.get_gyro()[2]
-    mag_yaw = tilt_compensated_yaw(myIMU.get_accel(), myIMU.get_mag())
-    gps_available = False
-    mag_available = False
+    ekf.dt = dt
 
+    ax, ay, _ = myIMU.get_accel()
+    psi = ekf.x[3, 0]  # current heading
+
+    # Project acceleration onto heading direction
+    a_forward = ax * np.cos(psi) + ay * np.sin(psi)
+
+    omega = myIMU.get_gyro()[2]
+
+    u = np.array([[a_forward],
+                  [omega]])
     # Prediction (IMU rate)
-    ekf.predict(accel, omega_z, current_time)
+    ekf.predict(u)
 
+    ekf.update_yaw(myIMU.get_magn()[2])
+
+    lat, lon = myGPS.get_lat(), myGPS.get_long()
+    x, y = latlon_toxy(lat, lon, lat_init, long_init)
+    ekf.update_gps(np.array([x, y]))
+
+    '''
+    # need to check if data is available so not wasting resources
     # Magnetometer Update
     if mag_available:
         ekf.update_mag(mag_yaw)
@@ -153,14 +170,15 @@ while True:
         lat, lon = myGPS.get_lat(), myGPS.get_long()
         x, y = latlon_toxy(lat, lon, lat_init, long_init)
         ekf.update_gps(np.array([x, y]))
+    '''
 
     # Print and save state
     x, y, v, psi = ekf.x.flatten()
-    print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, psi={np.degrees(psi):.1f} deg")")
+    print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, psi={np.degrees(psi):.1f} deg")
 
     with open(path, "a", newline="", encoding="utf-8") as f:
         cWriter = csv.writer(f)
-        cWriter.writerow([count, ekf.x[0], ekf.x[1], ekf.x[2], ekf.x[3], ekf.x[4], myGPS.get_lat(), myGPS.get_long(),tot_time,dt,
+        cWriter.writerow([count, ekf.x[0], ekf.x[1], ekf.x[2], ekf.x[3], myGPS.get_lat(), myGPS.get_long(),tot_time,dt,
                           myIMU.get_accel()[0], myIMU.get_accel()[1], myIMU.get_accel()[2], myIMU.get_gyro()[0],
                           myIMU.get_gyro()[1], myIMU.get_gyro()[2]])
         count += 1

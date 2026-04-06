@@ -1,8 +1,8 @@
 import numpy as np
 
 class EKF:
-    def __init__(self, dt):
-        self.dt = dt
+    def __init__(self):
+        self.dt = 0
         """
         Define state vector [x, y, v, psi]
         [x-position, y-position, speed (scalar), yaw (heading)]
@@ -112,4 +112,4 @@ class EKF:
         self.x[3,0] = self.normalize_angle(self.x[3,0])
 
     def normalize_angle(self, angle):
-        return (angle + np.pi) % (2 * np.pi) - np.pi)
+        return (angle + np.pi) % (2 * np.pi) - np.pi
