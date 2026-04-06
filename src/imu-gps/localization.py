@@ -1,8 +1,9 @@
 import time
 import numpy as np
-from ekf import EKF
+#from ekf import EKF
 from imu import IMU
 from gps import GPS
+from test_efk import EKF
 import csv
 from datetime import datetime
 import os
@@ -12,6 +13,41 @@ prev_time = time.time()
 myIMU = IMU()
 myGPS = GPS()
 tot_time = 0
+
+# This function converts latitude and longitude to local Cartesian coordinates (x, y) in meters relative to an origin point (lat0, lon0).
+def latlon_toxy(lat, lon, lat0, lon0):
+    R = 6378137  # Earth radius in meters
+
+    lat = np.radians(lat)
+    lon = np.radians(lon)
+
+    x = (lon - lon0) * R * np.cos(lat0)
+    y = (lat - lat0) * R
+
+    return x, y
+
+def tilt_compensated_yaw(accel, mag):
+    ax, ay, az = accel
+    mx, my, mz = mag
+
+    # Normalize accelerometer
+    norm_a = np.sqrt(ax**2 + ay**2 + az**2)
+    ax /= norm_a
+    ay /= norm_a
+    az /= norm_a
+
+    # Pitch and roll
+    pitch = np.arcsin(-ax)  # rotation around y-axis
+    roll = np.arctan2(ay, az) # rotation around x-axis
+
+    # Tilt compensation for magnetometer
+    mx_comp = mx * np.cos(pitch) + mz * np.sin(pitch)
+    my_comp = mx * np.sin(roll) * np.sin(pitch) + my * np.cos(roll) - mz * np.sin(roll) * np.cos(pitch)
+
+    # Yaw calculation
+    yaw = np.arctan2(-my_comp, mx_comp)  # rotation around z-axis, negative sign depends on sensor frame
+
+    return yaw
 
 
 # For creating test data
@@ -29,6 +65,7 @@ with open(path, "w", newline="", encoding="utf-8") as f:
                       "imu-gx","imu-gy","imu-gz",])
 
 print(f"Saving to: {path}")
+"""
 while True:
 
     time.sleep(0.5)
@@ -88,4 +125,44 @@ while True:
         count += 1
 
     tot_time += dt
+"""
+# Initial GPS reading to set the origin of the state vector
+# EKF expects a linear Cartesian system...so coordinates will be converted to Cardinal measurements
+lat_init, long_init = myGPS.get_lat(), myGPS.get_long()
+lat_init = np.radians(lat_init)
+long_init = np.radians(long_init)
 
+while True:
+    current_time = time.time()
+
+    accel = np.array([myIMU.get_accel()[0], myIMU.get_accel()[1]])
+    omega_z = myIMU.get_gyro()[2]
+    mag_yaw = tilt_compensated_yaw(myIMU.get_accel(), myIMU.get_mag())
+    gps_available = False
+    mag_available = False
+
+    # Prediction (IMU rate)
+    ekf.predict(accel, omega_z, current_time)
+
+    # Magnetometer Update
+    if mag_available:
+        ekf.update_mag(mag_yaw)
+
+    # GPS update
+    if gps_available:
+        lat, lon = myGPS.get_lat(), myGPS.get_long()
+        x, y = latlon_toxy(lat, lon, lat_init, long_init)
+        ekf.update_gps(np.array([x, y]))
+
+    # Print and save state
+    x, y, v, psi = ekf.x.flatten()
+    print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, psi={np.degrees(psi):.1f} deg")")
+
+    with open(path, "a", newline="", encoding="utf-8") as f:
+        cWriter = csv.writer(f)
+        cWriter.writerow([count, ekf.x[0], ekf.x[1], ekf.x[2], ekf.x[3], ekf.x[4], myGPS.get_lat(), myGPS.get_long(),tot_time,dt,
+                          myIMU.get_accel()[0], myIMU.get_accel()[1], myIMU.get_accel()[2], myIMU.get_gyro()[0],
+                          myIMU.get_gyro()[1], myIMU.get_gyro()[2]])
+        count += 1
+    
+    time.sleep(0.0001)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
