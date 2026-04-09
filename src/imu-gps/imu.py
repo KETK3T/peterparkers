@@ -20,6 +20,9 @@ class IMU:
         self.gyro =  self.sensor.gyro #rad/s
         self.magnetic = self.sensor.magnetic # uT
 
+        # new data flag
+        self.new_data = False
+
         # start background thread
         self.thread = threading.Thread(target=self.update_loop, daemon=True)
         self.thread.start()
@@ -37,6 +40,7 @@ class IMU:
             self.accel = self.sensor.acceleration
             self.gyro = self.sensor.gyro
             self.magnetic = self.sensor.magnetic
+            self.new_data = True
             #time.sleep(period)
 
     def get_accel(self):
@@ -46,6 +50,7 @@ class IMU:
         return self.gyro
 
     def get_magn(self):
+        self.new_data = False
         return self.magnetic
 
     def stop(self):

@@ -21,6 +21,9 @@ class GPS:
         self.longitude = 0
         self.altitude = 0 #sometimes returns None
 
+        # new data flag
+        self.new_data = False
+
         # start background thread
         self.thread = threading.Thread(target=self.update_loop, daemon=True)
         self.thread.start()
@@ -59,6 +62,7 @@ class GPS:
                                 self.latitude = msg.latitude
                                 self.longitude = msg.longitude
                                 self.altitude = msg.altitude
+                                self.new_data = True
 
                             except Exception as e:
                                 print(e)
@@ -83,3 +87,8 @@ class GPS:
         self.running = False
         self.ser.close()
         self.thread.join()
+
+    def get_data(self):
+        self.new_data = False
+        return self.latitude, self.longitude
+

@@ -130,6 +130,7 @@ while True:
 # EKF expects a linear Cartesian system...so coordinates will be converted to Cardinal measurements
 lat_init, long_init = myGPS.get_lat(), myGPS.get_long()
 
+
 while True:
     #current_time = time.time()
     current_time = time.time()
@@ -152,15 +153,17 @@ while True:
     # Prediction (IMU rate)
     ekf.predict(u)
 
+
     accel = myIMU.get_accel()
-    mag = myIMU.get_magn()
-    mag_yaw = tilt_compensated_yaw(accel, mag)
 
-    ekf.update_yaw(mag_yaw)
-
-    lat, lon = myGPS.get_lat(), myGPS.get_long()
-    x, y = latlon_toxy(lat, lon, lat_init, long_init)
-    ekf.update_gps(np.array([x, y]))
+    if myGPS.new_data:
+        mag = myIMU.get_magn()
+        mag_yaw = tilt_compensated_yaw(accel, mag)
+        ekf.update_yaw(mag_yaw)
+    if myIMU.new_data:
+        lat, lon = myGPS.get_data()
+        x, y = latlon_toxy(lat, lon, lat_init, long_init)
+        ekf.update_gps(np.array([x, y]))
 
     '''
     # need to check if data is available so not wasting resources
