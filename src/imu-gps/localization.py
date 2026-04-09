@@ -129,8 +129,6 @@ while True:
 # Initial GPS reading to set the origin of the state vector
 # EKF expects a linear Cartesian system...so coordinates will be converted to Cardinal measurements
 lat_init, long_init = myGPS.get_lat(), myGPS.get_long()
-lat_init = np.radians(lat_init)
-long_init = np.radians(long_init)
 
 while True:
     #current_time = time.time()
@@ -138,13 +136,14 @@ while True:
     dt = current_time - prev_time
     prev_time = current_time
 
+    dt = min(dt, 0.02)  # Cap dt to 20 ms to prevent large jumps
     ekf.dt = dt
 
     ax, ay, _ = myIMU.get_accel()
     psi = ekf.x[3, 0]  # current heading
 
     # Project acceleration onto heading direction
-    a_forward = ax * np.cos(psi) + ay * np.sin(psi)
+    a_forward = ax
 
     omega = myIMU.get_gyro()[2]
 
@@ -153,7 +152,11 @@ while True:
     # Prediction (IMU rate)
     ekf.predict(u)
 
-    ekf.update_yaw(myIMU.get_magn()[2])
+    accel = myIMU.get_accel()
+    mag = myIMU.get_magn()
+    mag_yaw = tilt_compensated_yaw(accel, mag)
+
+    ekf.update_yaw(mag_yaw)
 
     lat, lon = myGPS.get_lat(), myGPS.get_long()
     x, y = latlon_toxy(lat, lon, lat_init, long_init)
