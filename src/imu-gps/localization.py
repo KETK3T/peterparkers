@@ -161,6 +161,7 @@ while True:
 
     '''
     # need to check if data is available so not wasting resources
+    # thoughts: could check if there is difference from the last update, and if there is an update then blah blah blah
     # Magnetometer Update
     if mag_available:
         ekf.update_mag(mag_yaw)
@@ -178,7 +179,7 @@ while True:
 
     with open(path, "a", newline="", encoding="utf-8") as f:
         cWriter = csv.writer(f)
-        cWriter.writerow([count, ekf.x[0], ekf.x[1], ekf.x[2], ekf.x[3], myGPS.get_lat(), myGPS.get_long(),tot_time,dt,
+        cWriter.writerow([count, x, y, v, psi, myGPS.get_lat(), myGPS.get_long(),tot_time,dt,
                           myIMU.get_accel()[0], myIMU.get_accel()[1], myIMU.get_accel()[2], myIMU.get_gyro()[0],
                           myIMU.get_gyro()[1], myIMU.get_gyro()[2]])
         count += 1
