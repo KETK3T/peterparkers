@@ -21,8 +21,11 @@ def latlon_toxy(lat, lon, lat0, lon0):
     lat = np.radians(lat)
     lon = np.radians(lon)
 
-    x = (lon - lon0) * R * np.cos(lat0)
-    y = (lat - lat0) * R
+    lat0 = np.radians(lat0)
+    lon0 = np.radians(lon0)
+
+    x = (lon - lon0) * R * np.cos(lat0) * np.cos(lon0)
+    y = (lat - lat0) * R * np.cos(lat0) * np.sin(lon0)
 
     return x, y
 

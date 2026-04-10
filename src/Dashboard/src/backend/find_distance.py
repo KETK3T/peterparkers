@@ -98,7 +98,7 @@ INF_IDX = [0, 1]
 SPOT_CAMS = {'Left', 'Right'}
 MIN_BOX_H = {'Left': 30, 'Right': 30}  # Ignore detections smaller than this
 INTERSECT_ALLOWANCE = 0.10
-AUTO_CALIBRATE_INTERVAL = 2.0
+AUTO_CALIBRATE_INTERVAL = 60
 ROIS = {
     'Left': [
     ],
