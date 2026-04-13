@@ -35,13 +35,12 @@ class EKF:
         Based on sensor specs, increase if measurements are noisy
         Noisy output? Increase R values
         """
-        self.R_gps = np.diag([6.25, 6.25])  # GPS variance
-        self.R_yaw = np.array([[0.01]])     # magenetometer variance (from IMU)
+        self.R_gps = np.diag([25, 25])  # GPS variance, 5m std dev
+        self.R_yaw = np.array([[0.05]])     # magenetometer variance (from IMU)
 
-    def predict(self, u):
+    def predict(self, u, dt):
         a, omega = u.flatten()
         x, y, v, psi = self.x.flatten()
-        dt = self.dt
 
         # Nonlinear motion model: velocity + heading
         # x_pred = x_prev + v_prev * cos(psi_prev) * dt
@@ -52,7 +51,7 @@ class EKF:
         x_new = x + v * np.cos(psi) * dt
         y_new = y + v * np.sin(psi) * dt
         v_new = v + a * dt
-        psi_new = psi + omega * dt
+        psi_new = self.normalize_angle(psi + omega * dt)
 
         self.x = np.array([[x_new], [y_new], [v_new], [psi_new]])
 
@@ -77,7 +76,7 @@ class EKF:
 
         # Predict state covariance
         # P_pred = F * P * F^T + B * Q * B^T
-        self.P = F @ self.P @ F.T + B @ self.Q @ B.T
+        self.P = F @ self.P @ F.T + B @ (self.Q * dt) @ B.T
 
     def update_gps(self, z):
         # z = [x_meas, y_meas]
@@ -93,7 +92,8 @@ class EKF:
         K = self.P @ H.T @ np.linalg.inv(S)
 
         self.x = self.x + K @ y
-        self.P = (np.eye(4) - K @ H) @ self.P
+        I = np.eye(4)
+        self.P = (I - K @ H) @ self.P @ (I - K @ H).T + K @ self.R_gps @ K.T
 
     def update_yaw(self, yaw_meas):
         H = np.array([[0, 0, 0, 1]])
@@ -107,7 +107,8 @@ class EKF:
         K = self.P @ H.T @ np.linalg.inv(S)
 
         self.x = self.x + K @ y
-        self.P = (np.eye(4) - K @ H) @ self.P
+        I = np.eye(4)
+        self.P = (I - K @ H) @ self.P @ (I - K @ H).T + K @ self.R_yaw @ K.T
 
         self.x[3,0] = self.normalize_angle(self.x[3,0])
 

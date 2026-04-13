@@ -24,8 +24,8 @@ def latlon_toxy(lat, lon, lat0, lon0):
     lat0 = np.radians(lat0)
     lon0 = np.radians(lon0)
 
-    x = (lon - lon0) * R * np.cos(lat0) * np.cos(lon0)
-    y = (lat - lat0) * R * np.cos(lat0) * np.sin(lon0)
+    x = (lon - lon0) * R * np.cos(lat0)
+    y = (lat - lat0) * R
 
     return x, y
 
@@ -132,7 +132,8 @@ while True:
 # Initial GPS reading to set the origin of the state vector
 # EKF expects a linear Cartesian system...so coordinates will be converted to Cardinal measurements
 lat_init, long_init = myGPS.get_lat(), myGPS.get_long()
-
+last_gps_time = 0
+last_mag_time = 0
 
 while True:
     #current_time = time.time()
@@ -141,32 +142,37 @@ while True:
     prev_time = current_time
 
     dt = min(dt, 0.02)  # Cap dt to 20 ms to prevent large jumps
-    ekf.dt = dt
-
-    ax, ay, _ = myIMU.get_accel()
-    psi = ekf.x[3, 0]  # current heading
-
-    # Project acceleration onto heading direction
-    a_forward = ax
-
-    omega = myIMU.get_gyro()[2]
-
-    u = np.array([[a_forward],
-                  [omega]])
-    # Prediction (IMU rate)
-    ekf.predict(u)
-
 
     accel = myIMU.get_accel()
+    gyro = myIMU.get_gyro()
+    mag = myIMU.get_magn()
+    lat = myGPS.get_lat()
+    lon = myGPS.get_long()
 
-    if myGPS.new_data:
-        mag = myIMU.get_magn()
+    # Project acceleration onto heading direction
+    a_forward = accel[0]
+    a_forward = np.clip(a_forward, -5.0, 5.0)
+    omega = gyro[2]
+    omega = np.clip(omega, -3.0, 3.0)
+    u = np.array([[a_forward],
+                  [omega]])
+
+    # Prediction (IMU rate)
+    ekf.predict(u, dt)
+
+
+    if current_time - last_mag_time >= 0.01:
         mag_yaw = tilt_compensated_yaw(accel, mag)
         ekf.update_yaw(mag_yaw)
-    if myIMU.new_data:
-        lat, lon = myGPS.get_data()
+        last_mag_time = current_time
+    if current_time - last_gps_time > 0.2:  # Update GPS every 0.2 seconds (~5Hz)
         x, y = latlon_toxy(lat, lon, lat_init, long_init)
         ekf.update_gps(np.array([x, y]))
+        last_gps_time = current_time
+
+    # velocity clamp, essentially if the filter believes the user is barely moving, it forces speed down to 0
+    if abs(ekf.x[2, 0]) < 0.2:
+        ekf.x[2,0] = 0
 
     '''
     # need to check if data is available so not wasting resources
@@ -188,9 +194,9 @@ while True:
 
     with open(path, "a", newline="", encoding="utf-8") as f:
         cWriter = csv.writer(f)
-        cWriter.writerow([count, x, y, v, psi, myGPS.get_lat(), myGPS.get_long(),tot_time,dt,
-                          myIMU.get_accel()[0], myIMU.get_accel()[1], myIMU.get_accel()[2], myIMU.get_gyro()[0],
-                          myIMU.get_gyro()[1], myIMU.get_gyro()[2]])
+        cWriter.writerow([count, x, y, v, psi, lat, lon, tot_time, dt,
+                          accel[0], accel[1], accel[2], gyro[0],
+                          gyro[1], gyro[2]])
         count += 1
     
     time.sleep(0.0001)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
