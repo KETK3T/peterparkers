@@ -1,6 +1,5 @@
 import time
 import numpy as np
-#from ekf import EKF
 from imu import IMU
 from gps import GPS
 from test_ekf import EKF
@@ -8,14 +7,8 @@ import csv
 from datetime import datetime
 import os
 
-ekf = EKF()
-prev_time = time.time()
-myIMU = IMU()
-myGPS = GPS()
-tot_time = 0
-
 # This function converts latitude and longitude to local Cartesian coordinates (x, y) in meters relative to an origin point (lat0, lon0).
-def latlon_toxy(lat, lon, lat0, lon0):
+def latlon_toxy(lat, lon, lat0, lon0):  # lat0 and lon0 are the initial starting GPS coordinates
     R = 6378137  # Earth radius in meters
 
     lat = np.radians(lat)
@@ -29,6 +22,7 @@ def latlon_toxy(lat, lon, lat0, lon0):
 
     return x, y
 
+# This function calculates the yaw (heading) of the car. It uses pitch and roll to compensate for possible tilted angle of the IMU.
 def tilt_compensated_yaw(accel, mag):
     ax, ay, az = accel
     mx, my, mz = mag
@@ -55,94 +49,40 @@ def tilt_compensated_yaw(accel, mag):
 
 # For creating test data
 # Creates a new CSV file and prints headers, file closes before while loop
-
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 os.makedirs('output', exist_ok=True)
-path = f"output/output_{timestamp}.csv"
+path = f"output/output_{timestamp}.csv" # Creates new csv file titled ouput_YMD_HMS.csv
 count = 1 # csv row id
 
 with open(path, "w", newline="", encoding="utf-8") as f:
     cWriter = csv.writer(f)
     cWriter.writerow(["id", "latitude", "longitude", "speed", "heading",
-                      "gps-lat", "gps-long", "tot-time", "dt", "imu-ax", "imu-ay", "imu-az",
-                      "imu-gx","imu-gy","imu-gz",])
+                      "gps-lat", "gps-long", "dt", "imu-ax", "imu-ay", "imu-az",
+                      "imu-gx","imu-gy","imu-gz", "imu-mx", "imu-my", "imu-mz",])
 
 print(f"Saving to: {path}")
-"""
-while True:
 
-    time.sleep(0.5)
-    # IMU readings
-    ax, ay, az = myIMU.accel
-    gyro_x, gyro_y, gyro_z = myIMU.gyro
+ekf = EKF()
+myIMU = IMU()
+myGPS = GPS()
+prev_time = time.time()
 
-    # Compute dt using timestamps
-    now = time.time()
-    dt = now - prev_time
-    prev_time = now
-
-    ### Prediction step -- propagates uncertainty forward in time
-    # State prediction
-    ekf.x = ekf.predict_f(ekf.x, dt, ax, ay, gyro_z)
-    # Finds the jacobian of the motion model to determine F matrix
-    F = ekf.F_jacobian(ekf.x, dt, ax, ay)
-    # Covariance prediction
-    ekf.P = F @ ekf.P @ F.T + ekf.Q
-
-    ### Update step
-    # currently the loop is always running, but the GPS has a refresh rate of ~5Hz, need to research way to only perform
-    # update step when GPS receives new data
-    gps_x = myGPS.get_lat()
-    gps_y = myGPS.get_long()
-
-    # Finds H matrix by calculating the Jacobian of the measurement model
-    H = ekf.H_jacobian(ekf.x)
-    # Grabs estimate from state vector
-    z_pred = ekf.H(ekf.x)
-    # Compute the innovation (measurement residual)
-    y = np.array([gps_x, gps_y]) - z_pred
-
-    # Innovation covariance
-    S = H @ ekf.P @ H.T + ekf.R
-    # Kalman gain
-    K = ekf.P @ H.T @ np.linalg.inv(S)
-
-    # Updates the state estimate
-    ekf.x = ekf.x + K @ y
-    # Updates covariance
-    ekf.P = (np.eye(5) - K @ H) @ ekf.P
-
-    # Prints state vector
-    # position in lat and long coordinate
-    # velocity in x and y directions
-    # heading in radians
-    print(ekf)
-
-
-    #File is reopened each file loop in append mode so that data can be added in a new line
-    with open(path, "a", newline="", encoding="utf-8") as f:
-        cWriter = csv.writer(f)
-        cWriter.writerow([count, ekf.x[0], ekf.x[1], ekf.x[2], ekf.x[3], ekf.x[4], myGPS.get_lat(), myGPS.get_long(),tot_time,dt,
-                          myIMU.get_accel()[0], myIMU.get_accel()[1], myIMU.get_accel()[2], myIMU.get_gyro()[0],
-                          myIMU.get_gyro()[1], myIMU.get_gyro()[2]])
-        count += 1
-
-    tot_time += dt
-"""
 # Initial GPS reading to set the origin of the state vector
 # EKF expects a linear Cartesian system...so coordinates will be converted to Cardinal measurements
 lat_init, long_init = myGPS.get_lat(), myGPS.get_long()
 last_gps_time = 0
 last_mag_time = 0
 
+# Main loop, it should be running as fast as the fastest sensor output
 while True:
     #current_time = time.time()
     current_time = time.time()
     dt = current_time - prev_time
     prev_time = current_time
 
-    dt = min(dt, 0.02)  # Cap dt to 20 ms to prevent large jumps
-
+    dt = min(dt, 0.02)  # Cap dt to 20 ms to prevent large jumps (dt clamp)
+    
+    # This is to ensure that consistent values are used for all of the updates within a single iteration of the loop
     accel = myIMU.get_accel()
     gyro = myIMU.get_gyro()
     mag = myIMU.get_magn()
@@ -160,43 +100,32 @@ while True:
     # Prediction (IMU rate)
     ekf.predict(u, dt)
 
-
-    if current_time - last_mag_time >= 0.01:
-        mag_yaw = tilt_compensated_yaw(accel, mag)
-        ekf.update_yaw(mag_yaw)
-        last_mag_time = current_time
-    if current_time - last_gps_time > 0.2:  # Update GPS every 0.2 seconds (~5Hz)
+    # Updates GPS whenever there is new data
+    if current_time - last_gps_time > 0.2:
         x, y = latlon_toxy(lat, lon, lat_init, long_init)
         ekf.update_gps(np.array([x, y]))
         last_gps_time = current_time
+
+    # Updates yaw whenever there is new data from the magnetometer
+    if current_time - last_mag_time >= 0.01:
+        mag_yaw = tilt_compensated_yaw(accel, mag)  # THIS IS IN RADIANS
+        ekf.update_yaw(mag_yaw)
+        last_mag_time = current_time
 
     # velocity clamp, essentially if the filter believes the user is barely moving, it forces speed down to 0
     if abs(ekf.x[2, 0]) < 0.2:
         ekf.x[2,0] = 0
 
-    '''
-    # need to check if data is available so not wasting resources
-    # thoughts: could check if there is difference from the last update, and if there is an update then blah blah blah
-    # Magnetometer Update
-    if mag_available:
-        ekf.update_mag(mag_yaw)
-
-    # GPS update
-    if gps_available:
-        lat, lon = myGPS.get_lat(), myGPS.get_long()
-        x, y = latlon_toxy(lat, lon, lat_init, long_init)
-        ekf.update_gps(np.array([x, y]))
-    '''
-
     # Print and save state
-    x, y, v, psi = ekf.x.flatten()
-    print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, psi={np.degrees(psi):.1f} deg")
+    x, y, v, mag_yaw = ekf.x.flatten()
+    print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, mag_yaw={np.degrees(mag_yaw):.1f} rad")
 
     with open(path, "a", newline="", encoding="utf-8") as f:
         cWriter = csv.writer(f)
-        cWriter.writerow([count, x, y, v, psi, lat, lon, tot_time, dt,
-                          accel[0], accel[1], accel[2], gyro[0],
-                          gyro[1], gyro[2]])
+        cWriter.writerow([count, x, y, v, mag_yaw, lat, lon, dt,
+                          accel[0], accel[1], accel[2],
+                          gyro[0], gyro[1], gyro[2],
+                          mag[0], mag[1], mag[2]])
         count += 1
     
-    time.sleep(0.0001)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
+    time.sleep(0.0008)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
