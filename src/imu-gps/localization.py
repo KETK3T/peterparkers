@@ -1,5 +1,6 @@
 import time
 import numpy as np
+#from ekf import EKF
 from imu import IMU
 from gps import GPS
 from test_ekf import EKF
@@ -69,7 +70,18 @@ prev_time = time.time()
 
 # Initial GPS reading to set the origin of the state vector
 # EKF expects a linear Cartesian system...so coordinates will be converted to Cardinal measurements
-lat_init, long_init = myGPS.get_lat(), myGPS.get_long()
+lat_init = 0
+long_init = 0
+
+# This takes into account startup time for the GPS.
+while True:
+    lat_init, long_init = myGPS.get_lat(), myGPS.get_long()
+
+    if lat_init != 0 and long_init != 0:
+        break
+
+    time.sleep(0.1)
+
 last_gps_time = 0
 last_mag_time = 0
 
@@ -81,7 +93,7 @@ while True:
     prev_time = current_time
 
     dt = min(dt, 0.02)  # Cap dt to 20 ms to prevent large jumps (dt clamp)
-    
+
     # This is to ensure that consistent values are used for all of the updates within a single iteration of the loop
     accel = myIMU.get_accel()
     gyro = myIMU.get_gyro()
