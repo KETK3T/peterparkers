@@ -115,18 +115,23 @@ while True:
     # Updates GPS whenever there is new data
     if current_time - last_gps_time > 0.2:
         x, y = latlon_toxy(lat, lon, lat_init, long_init)
-        ekf.update_gps(np.array([x, y]))
+        dist = np.linalg.norm([x - ekf.x[0,0], y - ekf.x[1,0]])
+        if dist < 25.0: # GPS consistency gate, this is to check and see if one bad GPS point is dragging the EKF away from accuracy
+            ekf.update_gps(np.array([x, y]))
         last_gps_time = current_time
 
     # Updates yaw whenever there is new data from the magnetometer
     if current_time - last_mag_time >= 0.01:
         mag_yaw = tilt_compensated_yaw(accel, mag)  # THIS IS IN RADIANS
+        mag_yaw = ekf.normalize_angle(mag_yaw + np.pi)
         ekf.update_yaw(mag_yaw)
         last_mag_time = current_time
 
+    # This currently commented out to see if the clamp is causing the zero-velocity issue for output
     # velocity clamp, essentially if the filter believes the user is barely moving, it forces speed down to 0
-    if abs(ekf.x[2, 0]) < 0.2:
+    if abs(ekf.x[2, 0]) < 0.02:
         ekf.x[2,0] = 0
+
 
     # Print and save state
     x, y, v, mag_yaw = ekf.x.flatten()
