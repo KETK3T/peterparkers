@@ -8,6 +8,17 @@ import csv
 from datetime import datetime
 import os
 
+yaw_offset = 0.0
+yaw_offset_initialized = False
+
+prev_gps_x = None
+prev_gps_y = None
+prev_gps_time = None
+
+def blend_angle(old_angle, new_angle, alpha):
+    diff = ekf.normalize_angle(new_angle - old_angle)
+    return ekf.normalize_angle(old_angle + alpha * diff)
+
 # This function converts latitude and longitude to local Cartesian coordinates (x, y) in meters relative to an origin point (lat0, lon0).
 def latlon_toxy(lat, lon, lat0, lon0):  # lat0 and lon0 are the initial starting GPS coordinates
     R = 6378137  # Earth radius in meters
@@ -114,16 +125,46 @@ while True:
 
     # Updates GPS whenever there is new data
     if current_time - last_gps_time > 0.2:
-        x, y = latlon_toxy(lat, lon, lat_init, long_init)
-        dist = np.linalg.norm([x - ekf.x[0,0], y - ekf.x[1,0]])
-        if dist < 25.0: # GPS consistency gate, this is to check and see if one bad GPS point is dragging the EKF away from accuracy
-            ekf.update_gps(np.array([x, y]))
+        gps_x, gps_y = latlon_toxy(lat, lon, lat_init, long_init)
+
+        # GPS gate
+        dist_to_state = np.linalg.norm([
+            gps_x - ekf.x[0,0],
+            gps_y - ekf.x[1,0]
+        ])
+
+        if dist_to_state < 25.0:
+            ekf.update_gps(np.array([gps_x, gps_y]))
+
+        # Auto-calibrate yaw offset using GPS heading
+        if prev_gps_x is not None and pre_gps_time is not None:
+            dx = gps_x - prev_gps_x
+            dy = gps_y - prev_gps_y
+            dist = np.hypot(dx, dy)
+            gps_dt = current_time - prev_gps_time
+
+            # Only calibrates when GPS movement is big enough to give a meaningful heading, when the user is traveling roughly straight, and updates slowly so noise does not jerk the heading around
+            if gps_dt > 0 and dist > 3.0 and abs(gyro[2]) < 0.2:
+                gps_heading = np.arctan2(dy, dx)
+                mag_yaw_raw = tilt_compensated_yaw(accel, mag)
+
+                candidate_offset = ekf.normalize_angle(gps_heading - mag_yaw_raw)
+
+                if not yaw_offset_initialized:
+                    yaw_offset = candidate_offset
+                    yaw_offset_initialized = True
+                else:
+                    yaw_offset = blend_angle(yaw_offset, candidate_offset, alpha=0.05)
+
+        prev_gps_x = gps_x
+        prev_gps_y = gps_y
+        prev_gps_time = current_time
         last_gps_time = current_time
 
     # Updates yaw whenever there is new data from the magnetometer
     if current_time - last_mag_time >= 0.01:
         mag_yaw = tilt_compensated_yaw(accel, mag)  # THIS IS IN RADIANS
-        mag_yaw = ekf.normalize_angle(mag_yaw + np.pi)
+        mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + YAW_OFFSET)
         ekf.update_yaw(mag_yaw)
         last_mag_time = current_time
 
