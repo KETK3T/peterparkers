@@ -43,11 +43,11 @@ Alt code if this doesn't work
 myLocalization = Localization()
 
 state_dict = {
-        "longitude": float(state[0]),
-        "latitude": float(state[1]),
-        "velocity_x": float(state[2]),
-        "velocity_y": float(state[3]),
-        "heading": float(state[4])
+        "longitude": state[0],
+        "latitude": state[1],
+        "velocity_x": state[2],
+        "velocity_y": state[3],
+        "heading": state[4]
 }
 
 @app.route("/state")
