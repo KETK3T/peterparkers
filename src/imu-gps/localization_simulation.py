@@ -19,7 +19,6 @@ class SimGps:
     def __init__(self, lat, lon):
         self.latitude = lat
         self.longitude = lon
-        self.new_data = False
 
     def get_lat(self):
         return self.latitude
@@ -27,16 +26,11 @@ class SimGps:
     def get_long(self):
         return self.longitude
 
-    def get_data(self):
-        self.new_data = False
-        return self.latitude, self.longitude
-
 class SimImu:
     def __init__(self, ax, ay, az, gx, gy, gz, mx, my, mz):
         self.accel = ax, ay, az
         self.gyro = gx, gy, gz
         self.magnetic = mx, my, mz
-        self.new_data = False
 
     def get_accel(self):
         return self.accel
@@ -45,7 +39,6 @@ class SimImu:
         return self.gyro
 
     def get_magn(self):
-        self.new_data = False
         return self.magnetic
 
 
