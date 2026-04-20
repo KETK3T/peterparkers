@@ -105,7 +105,7 @@ def tilt_compensated_yaw(accel, mag):
 # Creates a new CSV file and prints headers, file closes before while loop
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 os.makedirs('output', exist_ok=True)
-path = f"output/output_{timestamp}.csv" # Creates new csv file titled ouput_YMD_HMS.csv
+path = f"output/sim_output_{timestamp}.csv" # Creates new csv file titled ouput_YMD_HMS.csv
 count = 1 # csv row id
 
 with open(path, "w", newline="", encoding="utf-8") as f:
