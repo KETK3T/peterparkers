@@ -102,3 +102,6 @@ python ./src/Dashboard/src/backend/find_distance.py -r -a #Allows you to record 
 (alt: -a, -A, --annotate)
 Running it without args auto runs the server for streaming
 
+imu-gps path
+sensor_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../imu-gps'))
+sys.path.append(sensor_path)

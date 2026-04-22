@@ -7,23 +7,28 @@ from localization import (
     IMU, GPS, EKF,
     latlon_toxy,
     tilt_compensated_yaw, blend_angle,
-    prev_gps_x, prev_gps_y, prev_gps_time,
-    yaw_offset, yaw_offset_initialized
 )
 import numpy as np
 
 app = Flask(__name__)
 
 def sensor_stream():
+    yaw_offset = 0.0
+    yaw_offset_initialized = False
+
+    prev_gps_x = None
+    prev_gps_y = None
+    prev_gps_time = None
+
     ekf = EKF()
-    imu = IMU()
-    gps = GPS()
+    myIMU = IMU()
+    myGPS = GPS()
 
     prev_time = time.time()
 
     # Initialize GPS origin
     while True:
-        lat_init, lon_init = gps.get_lat(), gps.get_long()
+        lat_init, lon_init = myGPS.get_lat(), myGPS.get_long()
         if lat_init != 0 and lon_init != 0:
             break
         time.sleep(0.1)
@@ -33,15 +38,17 @@ def sensor_stream():
 
     while True:
         current_time = time.time()
-        dt = min(current_time - prev_time, 0.02) # Cap dt to 20 ms to prevent large jumps (dt clamp)
+        dt = current_time - prev_time
         prev_time = current_time
 
+        dt = min(dt, 0.02)  # Cap dt to 20 ms to prevent large jumps (dt clamp)
+
         # This is to ensure that consistent values are used for all of the updates within a single iteration of the loop
-        accel = imu.get_accel()
-        gyro = imu.get_gyro()
-        mag = imu.get_magn()
-        lat = gps.get_lat()
-        lon = gps.get_long()
+        accel = myIMU.get_accel()
+        gyro = myIMU.get_gyro()
+        mag = myIMU.get_magn()
+        lat = myGPS.get_lat()
+        lon = myGPS.get_long()
 
         # Project acceleration onto heading direction
         a_forward = accel[0]
@@ -91,13 +98,20 @@ def sensor_stream():
             last_gps_time = current_time
 
         # Magnetometer update
-        if current_time - last_mag_time > 0.01:
-            mag_yaw = tilt_compensated_yaw(accel, mag)
+        if current_time - last_mag_time >= 0.01:
+            mag_yaw = tilt_compensated_yaw(accel, mag)  # THIS IS IN RADIANS
+            mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + yaw_offset)
             ekf.update_yaw(mag_yaw)
             last_mag_time = current_time
 
+        # This currently commented out to see if the clamp is causing the zero-velocity issue for output
+        # velocity clamp, essentially if the filter believes the user is barely moving, it forces speed down to 0
+        if abs(ekf.x[2, 0]) < 0.02:
+            ekf.x[2, 0] = 0
+
         # Extract state
         x, y, v, mag_yaw = ekf.x.flatten()
+        print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, mag_yaw={np.degrees(mag_yaw):.1f} rad")
 
         data = {
             "x": float(x),
@@ -111,7 +125,7 @@ def sensor_stream():
         # SSE format
         yield f"data: {json.dumps(data)}\n\n"
 
-        time.sleep(0.01)  # ~100 Hz
+        time.sleep(0.0008)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
 
 
 @app.route('/stream')
@@ -120,4 +134,4 @@ def stream():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, threaded=True)
+    app.run(debug=True, threaded=True, use_reloader=False)
