@@ -119,12 +119,12 @@ def sensor_stream():
         print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, mag_yaw={np.degrees(mag_yaw):.1f} rad")
 
         data = {
-            "x": float(x),
-            "y": float(y),
-            "v": float(v),
-            "mag_yaw": float(mag_yaw),
-            "lat": float(lat),
-            "lon": float(lon)
+            "x": float(x), #position in x direction
+            "y": float(y), #position in y direction
+            "v": float(v), #velocity
+            "mag_yaw": float(mag_yaw), #heading
+            "lat": float(lat), #gps--initial gps coordinate
+            "lon": float(lon) #gps--initial gps coordinate
         }
 
         # SSE format
