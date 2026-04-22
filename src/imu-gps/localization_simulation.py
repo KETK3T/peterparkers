@@ -7,8 +7,6 @@ from enum import nonmember
 
 import numpy as np
 #from ekf import EKF
-from imu import IMU
-from gps import GPS
 from test_ekf import EKF
 import csv
 from datetime import datetime
@@ -46,9 +44,9 @@ class SimImu:
 yaw_offset = 0.0
 yaw_offset_initialized = False
 
-prev_gps_x = None
-prev_gps_y = None
-prev_gps_time = None
+prev_gps_x = 0
+prev_gps_y = 0
+prev_gps_time = 0
 
 def blend_angle(old_angle, new_angle, alpha):
     diff = ekf.normalize_angle(new_angle - old_angle)
@@ -136,15 +134,15 @@ while data_idx < len(data):
     row = data[data_idx]
 
     # Simulating retrieving data from the sensors
-    dt = row["dt"]
+    dt = float(row["dt"])
     dt = min(dt, 0.02)  # Cap dt to 20 ms to prevent large jumps (dt clamp)
 
-    myIMU.accel = row["imu-ax"], row["imu-ay"], row["imu-az"]
-    myIMU.gyro = row["imu-gz"], row["imu-gy"], row["imu-gz"]
-    myIMU.mag = row["imu-mz"], row["imu-my"], row["imu-mz"]
+    myIMU.accel = float(row["imu-ax"]), float(row["imu-ay"]), float(row["imu-az"])
+    myIMU.gyro = float(row["imu-gz"]), float(row["imu-gy"]), float(row["imu-gz"])
+    myIMU.mag = float(row["imu-mz"]), float(row["imu-my"]), float(row["imu-mz"])
 
-    myGPS.latitude = row["gps-lat"]
-    myGPS.longitude = row["gps-long"]
+    myGPS.latitude = float(row["gps-lat"])
+    myGPS.longitude = float(row["gps-long"])
 
     # This is to ensure that consistent values are used for all of the updates within a single iteration of the loop
     accel = myIMU.get_accel()
@@ -203,7 +201,7 @@ while data_idx < len(data):
     # Updates yaw whenever there is new data from the magnetometer
     #if current_time - last_mag_time >= 0.01:
     mag_yaw = tilt_compensated_yaw(accel, mag)  # THIS IS IN RADIANS
-    mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + YAW_OFFSET)  #TODO: YAW_OFFSET is not referenced
+    mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + yaw_offset)  #TODO: YAW_OFFSET is not referenced
     ekf.update_yaw(mag_yaw)
 
 
