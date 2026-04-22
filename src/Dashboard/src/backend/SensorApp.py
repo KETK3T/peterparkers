@@ -95,7 +95,7 @@ def sensor_stream():
                         yaw_offset = candidate_offset
                         yaw_offset_initialized = True
                     else:
-                        yaw_offset = blend_angle(yaw_offset, candidate_offset, alpha=0.05)
+                        yaw_offset = blend_angle(ekf, yaw_offset, candidate_offset, alpha=0.05)
 
             prev_gps_x = gps_x
             prev_gps_y = gps_y
@@ -116,7 +116,7 @@ def sensor_stream():
 
         # Extract state
         x, y, v, mag_yaw = ekf.x.flatten()
-        print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, mag_yaw={np.degrees(mag_yaw):.1f} rad")
+        #print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, mag_yaw={np.degrees(mag_yaw):.1f} rad")
 
         data = {
             "x": float(x), #position in x direction
@@ -130,7 +130,7 @@ def sensor_stream():
         # SSE format
         yield f"data: {json.dumps(data)}\n\n"
 
-        time.sleep(0.0008)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
+        time.sleep(0.5)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
 
 
 @app.route('/stream')
