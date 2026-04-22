@@ -3,7 +3,6 @@
 # python ./src/imu-gps/localization_simulation.py output_for_sim/[filename].csv
 
 import time
-from enum import nonmember
 
 import numpy as np
 #from ekf import EKF
@@ -44,9 +43,9 @@ class SimImu:
 yaw_offset = 0.0
 yaw_offset_initialized = False
 
-prev_gps_x = 0
-prev_gps_y = 0
-prev_gps_time = 0
+prev_gps_x = None
+prev_gps_y = None
+prev_gps_time = None
 
 def blend_angle(old_angle, new_angle, alpha):
     diff = ekf.normalize_angle(new_angle - old_angle)
@@ -91,6 +90,42 @@ def tilt_compensated_yaw(accel, mag):
 
     return yaw
 
+def choose_gps_origin(data, min_valid_samples=5, stability_radius_m=5.0):
+    valid_points = []
+
+    for row in data:
+        lat = float(row["gps-lat"])
+        lon = float(row["gps-long"])
+
+        # Filters out invalid GPS points, such as (0,0)
+        if lat == 0 and lon == 0:
+            continue
+
+        if not (-90.0 <= lat <= 90.0 and -180.0 <- lon <= 180.0):
+            continue
+
+        valid_points.append((lat, lon))
+
+        if len(valid_points) >= min_valid_samples:
+            # Check stability
+            lat0, lon0 = valid_points[0]
+            
+            stable = True
+            for lat_i, lon_i in valid_points:
+                x, y = latlon_toxy(lat_i, lon_i, lat0, lon0)
+                if np.hypot(x, y) > stability_radius_m:
+                    stable = False
+                    break
+
+            if stable:
+                lat_avg = np.mean([p[0] for p in valid_points])
+                lon_avg = np.mean([p[1] for p in valid_points])
+                return lat_avg, lon_avg
+
+            valid_points.pop(0)
+
+    raise ValueError("Could not find a stable initial GPS fix in the CSV.")
+
 
 # For creating test data
 # Creates a new CSV file and prints headers, file closes before while loop
@@ -126,8 +161,8 @@ data_idx = 0 #refering to data in data = list(reader), used to read rows one by 
 
 # Initial GPS reading to set the origin of the state vector
 # EKF expects a linear Cartesian system...so coordinates will be converted to Cardinal measurements
-lat_init = 0
-long_init = 0
+lat_init, long_init = choose_gps_origin(data)
+print(f"GPS origin set to: {lat_init}, {long_init}")
 
 while data_idx < len(data):
     #Reads one row per iteration
@@ -138,8 +173,8 @@ while data_idx < len(data):
     dt = min(dt, 0.02)  # Cap dt to 20 ms to prevent large jumps (dt clamp)
 
     myIMU.accel = float(row["imu-ax"]), float(row["imu-ay"]), float(row["imu-az"])
-    myIMU.gyro = float(row["imu-gz"]), float(row["imu-gy"]), float(row["imu-gz"])
-    myIMU.mag = float(row["imu-mz"]), float(row["imu-my"]), float(row["imu-mz"])
+    myIMU.gyro = float(row["imu-gx"]), float(row["imu-gy"]), float(row["imu-gz"])
+    myIMU.magnetic = float(row["imu-mx"]), float(row["imu-my"]), float(row["imu-mz"])
 
     myGPS.latitude = float(row["gps-lat"])
     myGPS.longitude = float(row["gps-long"])
@@ -176,32 +211,33 @@ while data_idx < len(data):
         ekf.update_gps(np.array([gps_x, gps_y]))
 
     # Auto-calibrate yaw offset using GPS heading
-    #if prev_gps_x is not None and pre_gps_time is not None:
-    dx = gps_x - prev_gps_x
-    dy = gps_y - prev_gps_y
-    dist = np.hypot(dx, dy)
+    if prev_gps_x is not None and prev_gps_time is not None:
+        dx = gps_x - prev_gps_x
+        dy = gps_y - prev_gps_y
+        dist = np.hypot(dx, dy)
     #gps_dt = current_time - prev_gps_time
 
     # Only calibrates when GPS movement is big enough to give a meaningful heading, when the user is traveling roughly straight, and updates slowly so noise does not jerk the heading around
-    if dist > 3.0 and abs(gyro[2]) < 0.2:
-        gps_heading = np.arctan2(dy, dx)
-        mag_yaw_raw = tilt_compensated_yaw(accel, mag)
+        if dist > 3.0 and abs(gyro[2]) < 0.2:
+            gps_heading = np.arctan2(dy, dx)
+            mag_yaw_raw = tilt_compensated_yaw(accel, mag)
 
-        candidate_offset = ekf.normalize_angle(gps_heading - mag_yaw_raw)
+            candidate_offset = ekf.normalize_angle(gps_heading - mag_yaw_raw)
 
-        if not yaw_offset_initialized:
-            yaw_offset = candidate_offset
-            yaw_offset_initialized = True
-        else:
-            yaw_offset = blend_angle(yaw_offset, candidate_offset, alpha=0.05)
+            if not yaw_offset_initialized:
+                yaw_offset = candidate_offset
+                yaw_offset_initialized = True
+            else:
+                yaw_offset = blend_angle(yaw_offset, candidate_offset, alpha=0.05)
 
     prev_gps_x = gps_x
     prev_gps_y = gps_y
+    prev_gps_time = data_idx
 
     # Updates yaw whenever there is new data from the magnetometer
     #if current_time - last_mag_time >= 0.01:
     mag_yaw = tilt_compensated_yaw(accel, mag)  # THIS IS IN RADIANS
-    mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + yaw_offset)  #TODO: YAW_OFFSET is not referenced
+    mag_yaw = ekf.normalize_angle(mag_yaw + yaw_offset)  #TODO: YAW_OFFSET is not referenced
     ekf.update_yaw(mag_yaw)
 
 
