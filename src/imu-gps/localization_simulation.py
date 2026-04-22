@@ -127,88 +127,96 @@ def choose_gps_origin(data, min_valid_samples=5, stability_radius_m=5.0):
     raise ValueError("Could not find a stable initial GPS fix in the CSV.")
 
 
-# For creating test data
-# Creates a new CSV file and prints headers, file closes before while loop
-timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-os.makedirs('output', exist_ok=True)
-path = f"output/sim_output_{timestamp}.csv" # Creates new csv file titled ouput_YMD_HMS.csv
-count = 1 # csv row id
+def main():
+    yaw_offset = 0.0
+    yaw_offset_initialized = False
 
-with open(path, "w", newline="", encoding="utf-8") as f:
-    cWriter = csv.writer(f)
-    cWriter.writerow(["id", "latitude", "longitude", "speed", "heading",
-                      "gps-lat", "gps-long", "dt", "imu-ax", "imu-ay", "imu-az",
-                      "imu-gx","imu-gy","imu-gz", "imu-mx", "imu-my", "imu-mz",])
+    prev_gps_x = 0
+    prev_gps_y = 0
+    prev_gps_time = 0
 
-print(f"Saving to: {path}")
+    # For creating test data
+    # Creates a new CSV file and prints headers, file closes before while loop
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    os.makedirs('output', exist_ok=True)
+    path = f"output/sim_output_{timestamp}.csv" # Creates new csv file titled ouput_YMD_HMS.csv
+    count = 1 # csv row id
 
-# This is going get csv file from the command line
-if len(sys.argv) < 2:
-    print("Error: Need 1 output csv file")
-    sys.exit(1)
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        cWriter = csv.writer(f)
+        cWriter.writerow(["id", "latitude", "longitude", "speed", "heading",
+                          "gps-lat", "gps-long", "dt", "imu-ax", "imu-ay", "imu-az",
+                          "imu-gx","imu-gy","imu-gz", "imu-mx", "imu-my", "imu-mz",])
 
-input_file = sys.argv[1]
+    print(f"Saving to: {path}")
 
-with open(input_file, "r") as f:
-    reader = csv.DictReader(f)   # uses header row automatically
-    data = list(reader)  # convert to list so we can index rows
+    # This is going get csv file from the command line
+    if len(sys.argv) < 2:
+        print("Error: Need 1 output csv file")
+        sys.exit(1)
 
-ekf = EKF()
-myIMU = SimImu(0,0,0,0,0,0,0,0,0)
-myGPS = SimGps(0,0)
+    input_file = sys.argv[1]
 
-data_idx = 0 #refering to data in data = list(reader), used to read rows one by one for gps and imu data
+    with open(input_file, "r") as f:
+        reader = csv.DictReader(f)   # uses header row automatically
+        data = list(reader)  # convert to list so we can index rows
+
+    ekf = EKF()
+    myIMU = SimImu(0,0,0,0,0,0,0,0,0)
+    myGPS = SimGps(0,0)
+
+    data_idx = 0 #refering to data in data = list(reader), used to read rows one by one for gps and imu data
 
 # Initial GPS reading to set the origin of the state vector
 # EKF expects a linear Cartesian system...so coordinates will be converted to Cardinal measurements
 lat_init, long_init = choose_gps_origin(data)
 print(f"GPS origin set to: {lat_init}, {long_init}")
 
-while data_idx < len(data):
-    #Reads one row per iteration
-    row = data[data_idx]
+    while data_idx < len(data):
+        #Reads one row per iteration
+        row = data[data_idx]
 
-    # Simulating retrieving data from the sensors
-    dt = float(row["dt"])
-    dt = min(dt, 0.02)  # Cap dt to 20 ms to prevent large jumps (dt clamp)
+        # Simulating retrieving data from the sensors
+        dt = float(row["dt"])
+        dt = min(dt, 0.02)  # Cap dt to 20 ms to prevent large jumps (dt clamp)
 
     myIMU.accel = float(row["imu-ax"]), float(row["imu-ay"]), float(row["imu-az"])
     myIMU.gyro = float(row["imu-gx"]), float(row["imu-gy"]), float(row["imu-gz"])
     myIMU.magnetic = float(row["imu-mx"]), float(row["imu-my"]), float(row["imu-mz"])
 
-    myGPS.latitude = float(row["gps-lat"])
-    myGPS.longitude = float(row["gps-long"])
+        myGPS.latitude = float(row["gps-lat"])
+        myGPS.longitude = float(row["gps-long"])
 
-    # This is to ensure that consistent values are used for all of the updates within a single iteration of the loop
-    accel = myIMU.get_accel()
-    gyro = myIMU.get_gyro()
-    mag = myIMU.get_magn()
-    lat = myGPS.get_lat()
-    lon = myGPS.get_long()
+        # This is to ensure that consistent values are used for all of the updates within a single iteration of the loop
+        accel = myIMU.get_accel()
+        gyro = myIMU.get_gyro()
+        mag = myIMU.get_magn()
+        lat = myGPS.get_lat()
+        lon = myGPS.get_long()
 
-    # Project acceleration onto heading direction
-    a_forward = accel[0]
-    a_forward = np.clip(a_forward, -5.0, 5.0)
-    omega = gyro[2]
-    omega = np.clip(omega, -3.0, 3.0)
-    u = np.array([[a_forward],
-                  [omega]])
+        # Project acceleration onto heading direction
+        a_forward = accel[0]
+        a_forward = np.clip(a_forward, -5.0, 5.0)
+        omega = gyro[2]
+        omega = np.clip(omega, -3.0, 3.0)
+        u = np.array([[a_forward],
+                      [omega]])
 
-    # Prediction (IMU rate)
-    ekf.predict(u, dt)
+        # Prediction (IMU rate)
+        ekf.predict(u, dt)
 
-    # Updates GPS whenever there is new data
-    #if current_time - last_gps_time > 0.2:
-    gps_x, gps_y = latlon_toxy(lat, lon, lat_init, long_init)
+        # Updates GPS whenever there is new data
+        #if current_time - last_gps_time > 0.2:
+        gps_x, gps_y = latlon_toxy(lat, lon, lat_init, long_init)
 
-    # GPS gate
-    dist_to_state = np.linalg.norm([
-        gps_x - ekf.x[0, 0],
-        gps_y - ekf.x[1, 0]
-    ])
+        # GPS gate
+        dist_to_state = np.linalg.norm([
+            gps_x - ekf.x[0, 0],
+            gps_y - ekf.x[1, 0]
+        ])
 
-    if dist_to_state < 25.0:
-        ekf.update_gps(np.array([gps_x, gps_y]))
+        if dist_to_state < 25.0:
+            ekf.update_gps(np.array([gps_x, gps_y]))
 
     # Auto-calibrate yaw offset using GPS heading
     if prev_gps_x is not None and prev_gps_time is not None:
@@ -241,25 +249,25 @@ while data_idx < len(data):
     ekf.update_yaw(mag_yaw)
 
 
-    # This currently commented out to see if the clamp is causing the zero-velocity issue for output
-    # velocity clamp, essentially if the filter believes the user is barely moving, it forces speed down to 0
-    if abs(ekf.x[2, 0]) < 0.02:
-        ekf.x[2, 0] = 0
+        # This currently commented out to see if the clamp is causing the zero-velocity issue for output
+        # velocity clamp, essentially if the filter believes the user is barely moving, it forces speed down to 0
+        if abs(ekf.x[2, 0]) < 0.02:
+            ekf.x[2, 0] = 0
 
-    # Print and save state
-    x, y, v, mag_yaw = ekf.x.flatten()
-    print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, mag_yaw={np.degrees(mag_yaw):.1f} rad")
+        # Print and save state
+        x, y, v, mag_yaw = ekf.x.flatten()
+        print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, mag_yaw={np.degrees(mag_yaw):.1f} rad")
 
-    with open(path, "a", newline="", encoding="utf-8") as f:
-        cWriter = csv.writer(f)
-        cWriter.writerow([count, x, y, v, mag_yaw, lat, lon, dt,
-                          accel[0], accel[1], accel[2],
-                          gyro[0], gyro[1], gyro[2],
-                          mag[0], mag[1], mag[2]])
-        count += 1
+        with open(path, "a", newline="", encoding="utf-8") as f:
+            cWriter = csv.writer(f)
+            cWriter.writerow([count, x, y, v, mag_yaw, lat, lon, dt,
+                              accel[0], accel[1], accel[2],
+                              gyro[0], gyro[1], gyro[2],
+                              mag[0], mag[1], mag[2]])
+            count += 1
 
-    data_idx += 1 #Moves to next row in csv file
-    time.sleep(0.0008)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
+        data_idx += 1 #Moves to next row in csv file
+        time.sleep(0.0008)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
 
-
-
+if __name__ == "__main__":
+    main()
