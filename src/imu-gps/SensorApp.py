@@ -9,10 +9,27 @@ from localization import (
     tilt_compensated_yaw, blend_angle,
 )
 import numpy as np
+import csv
+from datetime import datetime
+import os
 
 app = Flask(__name__)
 
 def sensor_stream():
+    # For testing purposes
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    os.makedirs('output', exist_ok=True)
+    path = f"output/output_{timestamp}.csv"
+    count = 1
+
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        cWriter = csv.writer(f)
+        cWriter.writerow(["id", "latitude", "longitude", "speed", "heading",
+                          "gps-lat", "gps-long", "dt", "imu-ax", "imu-ay", "imu-az",
+                          "imu-gx", "imu-gy", "imu-gz", "imu-mx", "imu-my", "imu-mz", ])
+
+    print(f"Saving to: {path}")
+
     yaw_offset = 0.0
     yaw_offset_initialized = False
 
@@ -113,6 +130,14 @@ def sensor_stream():
         x, y, v, mag_yaw = ekf.x.flatten()
         print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, mag_yaw={np.degrees(mag_yaw):.1f} rad")
 
+        with open(path, "a", newline="", encoding="utf-8") as f:
+            cWriter = csv.writer(f)
+            cWriter.writerow([count, x, y, v, mag_yaw, lat, lon, dt,
+                              accel[0], accel[1], accel[2],
+                              gyro[0], gyro[1], gyro[2],
+                              mag[0], mag[1], mag[2]])
+            count += 1
+
         data = {
             "x": float(x),
             "y": float(y),
@@ -124,6 +149,8 @@ def sensor_stream():
 
         # SSE format
         yield f"data: {json.dumps(data)}\n\n"
+
+
 
         time.sleep(0.0008)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
 
