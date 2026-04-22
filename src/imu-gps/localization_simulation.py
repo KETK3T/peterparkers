@@ -39,15 +39,7 @@ class SimImu:
         return self.magnetic
 
 
-
-yaw_offset = 0.0
-yaw_offset_initialized = False
-
-prev_gps_x = None
-prev_gps_y = None
-prev_gps_time = None
-
-def blend_angle(old_angle, new_angle, alpha):
+def blend_angle(ekf, old_angle, new_angle, alpha):
     diff = ekf.normalize_angle(new_angle - old_angle)
     return ekf.normalize_angle(old_angle + alpha * diff)
 
@@ -167,10 +159,10 @@ def main():
 
     data_idx = 0 #refering to data in data = list(reader), used to read rows one by one for gps and imu data
 
-# Initial GPS reading to set the origin of the state vector
-# EKF expects a linear Cartesian system...so coordinates will be converted to Cardinal measurements
-lat_init, long_init = choose_gps_origin(data)
-print(f"GPS origin set to: {lat_init}, {long_init}")
+    # Initial GPS reading to set the origin of the state vector
+    # EKF expects a linear Cartesian system...so coordinates will be converted to Cardinal measurements
+    lat_init, long_init = choose_gps_origin(data)
+    print(f"GPS origin set to: {lat_init}, {long_init}")
 
     while data_idx < len(data):
         #Reads one row per iteration
@@ -180,9 +172,9 @@ print(f"GPS origin set to: {lat_init}, {long_init}")
         dt = float(row["dt"])
         dt = min(dt, 0.02)  # Cap dt to 20 ms to prevent large jumps (dt clamp)
 
-    myIMU.accel = float(row["imu-ax"]), float(row["imu-ay"]), float(row["imu-az"])
-    myIMU.gyro = float(row["imu-gx"]), float(row["imu-gy"]), float(row["imu-gz"])
-    myIMU.magnetic = float(row["imu-mx"]), float(row["imu-my"]), float(row["imu-mz"])
+        myIMU.accel = float(row["imu-ax"]), float(row["imu-ay"]), float(row["imu-az"])
+        myIMU.gyro = float(row["imu-gx"]), float(row["imu-gy"]), float(row["imu-gz"])
+        myIMU.magnetic = float(row["imu-mx"]), float(row["imu-my"]), float(row["imu-mz"])
 
         myGPS.latitude = float(row["gps-lat"])
         myGPS.longitude = float(row["gps-long"])
@@ -218,35 +210,35 @@ print(f"GPS origin set to: {lat_init}, {long_init}")
         if dist_to_state < 25.0:
             ekf.update_gps(np.array([gps_x, gps_y]))
 
-    # Auto-calibrate yaw offset using GPS heading
-    if prev_gps_x is not None and prev_gps_time is not None:
-        dx = gps_x - prev_gps_x
-        dy = gps_y - prev_gps_y
-        dist = np.hypot(dx, dy)
-    #gps_dt = current_time - prev_gps_time
+        # Auto-calibrate yaw offset using GPS heading
+        if prev_gps_x is not None and prev_gps_time is not None:
+            dx = gps_x - prev_gps_x
+            dy = gps_y - prev_gps_y
+            dist = np.hypot(dx, dy)
+            #gps_dt = current_time - prev_gps_time
 
-    # Only calibrates when GPS movement is big enough to give a meaningful heading, when the user is traveling roughly straight, and updates slowly so noise does not jerk the heading around
-        if dist > 3.0 and abs(gyro[2]) < 0.2:
-            gps_heading = np.arctan2(dy, dx)
-            mag_yaw_raw = tilt_compensated_yaw(accel, mag)
+            # Only calibrates when GPS movement is big enough to give a meaningful heading, when the user is traveling roughly straight, and updates slowly so noise does not jerk the heading around
+            if dist > 3.0 and abs(gyro[2]) < 0.2:
+                gps_heading = np.arctan2(dy, dx)
+                mag_yaw_raw = tilt_compensated_yaw(accel, mag)
 
-            candidate_offset = ekf.normalize_angle(gps_heading - mag_yaw_raw)
+                candidate_offset = ekf.normalize_angle(gps_heading - mag_yaw_raw)
 
-            if not yaw_offset_initialized:
-                yaw_offset = candidate_offset
-                yaw_offset_initialized = True
-            else:
-                yaw_offset = blend_angle(yaw_offset, candidate_offset, alpha=0.05)
+                if not yaw_offset_initialized:
+                    yaw_offset = candidate_offset
+                    yaw_offset_initialized = True
+                else:
+                    yaw_offset = blend_angle(ekf, yaw_offset, candidate_offset, alpha=0.05)
 
-    prev_gps_x = gps_x
-    prev_gps_y = gps_y
-    prev_gps_time = data_idx
+        prev_gps_x = gps_x
+        prev_gps_y = gps_y
+        prev_gps_time = data_idx
 
-    # Updates yaw whenever there is new data from the magnetometer
-    #if current_time - last_mag_time >= 0.01:
-    mag_yaw = tilt_compensated_yaw(accel, mag)  # THIS IS IN RADIANS
-    mag_yaw = ekf.normalize_angle(mag_yaw + yaw_offset)  #TODO: YAW_OFFSET is not referenced
-    ekf.update_yaw(mag_yaw)
+        # Updates yaw whenever there is new data from the magnetometer
+        #if current_time - last_mag_time >= 0.01:
+        mag_yaw = tilt_compensated_yaw(accel, mag)  # THIS IS IN RADIANS
+        mag_yaw = ekf.normalize_angle(mag_yaw + yaw_offset)
+        ekf.update_yaw(mag_yaw)
 
 
         # This currently commented out to see if the clamp is causing the zero-velocity issue for output
@@ -264,8 +256,7 @@ print(f"GPS origin set to: {lat_init}, {long_init}")
                               accel[0], accel[1], accel[2],
                               gyro[0], gyro[1], gyro[2],
                               mag[0], mag[1], mag[2]])
-            count += 1
-
+        count += 1
         data_idx += 1 #Moves to next row in csv file
         time.sleep(0.0008)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
 

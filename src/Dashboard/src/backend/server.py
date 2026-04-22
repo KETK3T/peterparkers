@@ -4,7 +4,7 @@ import csv
 import json
 
 PORT = 8765
-CSV_FILE = "./src/Dashboard/src/backend/temporary_coordinates.txt"
+CSV_FILE = "./src/Dashboard/src/backend/coordinates.csv"
 
 async def send_coordinates(websocket):
     print("Client connected")
@@ -22,7 +22,7 @@ async def send_coordinates(websocket):
                 await websocket.send(json.dumps(data))
                 print("Sent:", data)
 
-                await asyncio.sleep(2)  # 0.5 second timer
+                await asyncio.sleep(0.6)  # 0.5 second timer
 
         # Loop back to beginning of file
 
