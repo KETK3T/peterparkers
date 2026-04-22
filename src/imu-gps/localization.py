@@ -137,7 +137,7 @@ while True:
             ekf.update_gps(np.array([gps_x, gps_y]))
 
         # Auto-calibrate yaw offset using GPS heading
-        if prev_gps_x is not None and pre_gps_time is not None:
+        if prev_gps_x is not None and prev_gps_time is not None:
             dx = gps_x - prev_gps_x
             dy = gps_y - prev_gps_y
             dist = np.hypot(dx, dy)
@@ -164,7 +164,7 @@ while True:
     # Updates yaw whenever there is new data from the magnetometer
     if current_time - last_mag_time >= 0.01:
         mag_yaw = tilt_compensated_yaw(accel, mag)  # THIS IS IN RADIANS
-        mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + YAW_OFFSET)
+        mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + yaw_offset)
         ekf.update_yaw(mag_yaw)
         last_mag_time = current_time
 
