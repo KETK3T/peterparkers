@@ -285,7 +285,10 @@ useEffect(() => {
     try {
       const data = JSON.parse(event.data)
 
-
+      const x = data.x
+      const y = data.y
+      const v = data.v
+      const mag_yaw = data.mag_yaw
       const lat = data.lat
       const lon = data.lon  // NOTE: your backend uses "lon", not "long"
 
