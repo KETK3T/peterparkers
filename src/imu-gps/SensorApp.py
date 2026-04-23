@@ -19,6 +19,9 @@ import os
 
 app = Flask(__name__)
 
+from flask_cors import CORS
+CORS(app)
+
 def sensor_stream():
     # For testing purposes
     # This creates a CSV file that will store the raw data and the EKF predictions for each loop iteration

@@ -14,6 +14,9 @@ import numpy as np
 
 app = Flask(__name__)
 
+from flask_cors import CORS
+CORS(app)
+
 def sensor_stream():
     yaw_offset = 0.0
     yaw_offset_initialized = False
@@ -115,7 +118,7 @@ def sensor_stream():
         # Updates yaw whenever there is new data from the magnetometer
         # if current_time - last_mag_time >= 0.01:
         mag_yaw = tilt_compensated_yaw(accel, mag)  # THIS IS IN RADIANS
-        mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + yaw_offset)  # TODO: YAW_OFFSET is not referenced
+        mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + yaw_offset)
         ekf.update_yaw(mag_yaw)
 
         # This currently commented out to see if the clamp is causing the zero-velocity issue for output
@@ -141,8 +144,9 @@ def sensor_stream():
 
         data_idx += 1  # Moves to next row in csv file
         if data_idx >= len(data):
-            print("Done!")
-            break
+            data_idx = 0  # loop again instead of breaking
+            #print("Done!")
+            #break
         time.sleep(0.01)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
 
 

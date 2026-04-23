@@ -1,6 +1,6 @@
 # To run
 # Be in peterparkers directory
-# python ./src/imu-gps/localization_simulation.py output_for_sim/[filename].csv
+# python ./src/imu-gps/localization_simulation.py output/[filename].csv
 
 import time
 
@@ -69,9 +69,6 @@ def tilt_compensated_yaw(accel, mag):
 
     # Normalize accelerometer
     norm_a = np.sqrt(ax**2 + ay**2 + az**2)
-
-    if norm_a == 0 or np.isnan(norm_a):
-        return np.nan  # or np.nan, depending on how you want to handle it
 
     ax /= norm_a
     ay /= norm_a
