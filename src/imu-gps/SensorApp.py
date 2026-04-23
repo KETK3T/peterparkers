@@ -115,13 +115,14 @@ def sensor_stream():
                     gps_heading = np.arctan2(dy, dx)
                     mag_yaw_raw = tilt_compensated_yaw(accel, mag)
 
-                    candidate_offset = ekf.normalize_angle(gps_heading - mag_yaw_raw)
+                    if mag_yaw_raw is not None and np.isfinite(mag_yaw_raw):
+                        candidate_offset = ekf.normalize_angle(gps_heading - mag_yaw_raw)
 
-                    if not yaw_offset_initialized:
-                        yaw_offset = candidate_offset
-                        yaw_offset_initialized = True
-                    else:
-                        yaw_offset = blend_angle(yaw_offset, candidate_offset, alpha=0.05)
+                        if not yaw_offset_initialized:
+                            yaw_offset = candidate_offset
+                            yaw_offset_initialized = True
+                        else:
+                            yaw_offset = blend_angle(ekf, yaw_offset, candidate_offset, alpha=0.05)
 
             prev_gps_x = gps_x
             prev_gps_y = gps_y
@@ -129,10 +130,11 @@ def sensor_stream():
             last_gps_time = current_time
 
         # Magnetometer update
-        if current_time - last_mag_time >= 0.01:    # Magnetometer has an ODR of 100 Hz
+        if current_time - last_mag_time >= 0.01:    # Magnetometer ODR is 100 Hz
             mag_yaw = tilt_compensated_yaw(accel, mag)  # THIS IS IN RADIANS
-            mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + yaw_offset)
-            ekf.update_yaw(mag_yaw)
+            if mag_yaw is not None: # Checks for invalid input
+                mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + yaw_offset)
+                ekf.update_yaw(mag_yaw)
             last_mag_time = current_time
 
         # velocity clamp, essentially if the filter believes the user is barely moving, it forces speed down to 0

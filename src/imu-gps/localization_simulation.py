@@ -63,12 +63,12 @@ def tilt_compensated_yaw(accel, mag):
     ax, ay, az = accel
     mx, my, mz = mag
 
-
-
-
-
     # Normalize accelerometer
-    norm_a = np.sqrt(ax**2 + ay**2 + az**2)
+    norm_a = np.sqrt(ax ** 2 + ay ** 2 + az ** 2)
+    norm_m = np.sqrt(mx ** 2 + my ** 2 + mz ** 2)
+
+    if norm_a < 1e-6 or norm_m < 1e-6:
+        return None
 
     ax /= norm_a
     ay /= norm_a
@@ -76,7 +76,7 @@ def tilt_compensated_yaw(accel, mag):
 
     # Pitch and roll
     pitch = np.arcsin(-ax)  # rotation around y-axis
-    roll = np.arctan2(ay, az) # rotation around x-axis
+    roll = np.arctan2(ay, az)  # rotation around x-axis
 
     # Tilt compensation for magnetometer
     mx_comp = mx * np.cos(pitch) + mz * np.sin(pitch)
@@ -263,7 +263,7 @@ def main():
                               mag[0], mag[1], mag[2]])
         count += 1
         data_idx += 1 #Moves to next row in csv file
-        time.sleep(0.0008)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
+        time.sleep(0.01)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
 
 if __name__ == "__main__":
     main()

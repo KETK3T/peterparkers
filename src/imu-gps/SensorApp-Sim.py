@@ -104,22 +104,23 @@ def sensor_stream():
             gps_heading = np.arctan2(dy, dx)
             mag_yaw_raw = tilt_compensated_yaw(accel, mag)
 
-            candidate_offset = ekf.normalize_angle(gps_heading - mag_yaw_raw)
+            if mag_yaw_raw is not None and np.isfinite(mag_yaw_raw):
+                candidate_offset = ekf.normalize_angle(gps_heading - mag_yaw_raw)
 
-            if not yaw_offset_initialized:
-                yaw_offset = candidate_offset
-                yaw_offset_initialized = True
-            else:
-                yaw_offset = blend_angle(ekf, yaw_offset, candidate_offset, alpha=0.05)
+                if not yaw_offset_initialized:
+                    yaw_offset = candidate_offset
+                    yaw_offset_initialized = True
+                else:
+                    yaw_offset = blend_angle(ekf, yaw_offset, candidate_offset, alpha=0.05)
 
         prev_gps_x = gps_x
         prev_gps_y = gps_y
 
         # Updates yaw whenever there is new data from the magnetometer
-        # if current_time - last_mag_time >= 0.01:
         mag_yaw = tilt_compensated_yaw(accel, mag)  # THIS IS IN RADIANS
-        mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + yaw_offset)
-        ekf.update_yaw(mag_yaw)
+        if mag_yaw is not None:
+            mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + yaw_offset)
+            ekf.update_yaw(mag_yaw)
 
         # This currently commented out to see if the clamp is causing the zero-velocity issue for output
         # velocity clamp, essentially if the filter believes the user is barely moving, it forces speed down to 0

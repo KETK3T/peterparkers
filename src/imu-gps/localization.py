@@ -36,6 +36,11 @@ def tilt_compensated_yaw(accel, mag):
 
     # Normalize accelerometer
     norm_a = np.sqrt(ax**2 + ay**2 + az**2)
+    norm_m = np.sqrt(mx**2 + my**2 + mz**2)
+
+    if norm_a < 1e-6 or norm_m < 1e-6:
+        return None
+
     ax /= norm_a
     ay /= norm_a
     az /= norm_a
@@ -165,8 +170,9 @@ def main():
         # Updates yaw whenever there is new data from the magnetometer
         if current_time - last_mag_time >= 0.01:
             mag_yaw = tilt_compensated_yaw(accel, mag)  # THIS IS IN RADIANS
-            mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + yaw_offset)
-            ekf.update_yaw(mag_yaw)
+            if mag_yaw is not None:
+                mag_yaw = ekf.normalize_angle(mag_yaw + np.pi + yaw_offset)
+                ekf.update_yaw(mag_yaw)
             last_mag_time = current_time
 
         # This currently commented out to see if the clamp is causing the zero-velocity issue for output
