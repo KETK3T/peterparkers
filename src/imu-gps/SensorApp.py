@@ -63,6 +63,17 @@ def sensor_stream():
     last_gps_time = 0
     last_mag_time = 0
 
+    # accel_measured = accel_true + bias + noise
+    # When car is not moving, accel_true is 0 and there is no noise...so that means any accel_measured = bias
+    bias_samples = []
+    for _ in range(100):
+        a = myIMU.get_accel()
+        bias_samples.append(a[0])
+        time.sleep(0.01)
+
+    accel_bias_x = np.mean(bias_samples)
+    print(f"Estimated accel bias x: {accel_bias_x}")    # Car needs to remain still until this message pops up in terminal
+
     while True:
         current_time = time.time()
         dt = current_time - prev_time
@@ -81,7 +92,7 @@ def sensor_stream():
         # The logic here is that the car is either traveling forwards or backwards, even while turning it is still technically
         # maintaining acceleration in the direction that the x-direction of the IMU is facing. The car does not travel sideways,
         # so we do not need accel[1]
-        a_forward = accel[0]
+        a_forward = accel[0] - accel_bias_x
         a_forward = np.clip(a_forward, -5.0, 5.0)   # Prevents bad numbers from hurting the EKF predictions
         omega = gyro[2]
         omega = np.clip(omega, -3.0, 3.0)   # Prevents bad numbers from hurting the EKF predictions
@@ -93,14 +104,22 @@ def sensor_stream():
         # GPS update
         if current_time - last_gps_time > 0.2:  # GPS has an ODR of 5 Hz
             gps_x, gps_y = latlon_toxy(lat, lon, lat_init, lon_init)    # Converts lat and long into Cartesian coordinates b/c IMU measures in meters and typical GPS coords are angular
+            z_gps = np.array([gps_x, gps_y])
 
             # GPS gate to prevent bad numbers from hurting EKF predictions
             dist_to_state = np.linalg.norm([
                 gps_x - ekf.x[0, 0],
                 gps_y - ekf.x[1, 0]
             ])
+
+            old_R = ekf.R_gps.copy()
+
             if dist_to_state < 25.0:
                 ekf.update_gps(np.array([gps_x, gps_y]))
+            elif dist_to_state < 100.0:
+                ekf.R_gps = np.diag([400.0, 400.0])
+                ekf.update_gps(z_gps)
+                ekf.R_gps = old_R
 
             # Auto-calibrate yaw offset using GPS heading
             if prev_gps_x is not None and prev_gps_time is not None:
@@ -143,7 +162,10 @@ def sensor_stream():
 
         # Extract state
         x, y, v, mag_yaw = ekf.x.flatten()
-        #print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, mag_yaw={np.degrees(mag_yaw):.1f} degrees")    # Converts heading to degrees for easier comprehension
+        # print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, mag_yaw={np.degrees(mag_yaw):.1f} rad")
+        R = 6378137  # Earth radius
+        lat_est = lat_init + (y / R) * (180 / np.pi)
+        lon_est = lon_init + (x / (R * np.cos(np.radians(lat_init)))) * (180 / np.pi)
 
         # Saves state in testing output CSV file
         with open(path, "a", newline="", encoding="utf-8") as f:
@@ -159,8 +181,8 @@ def sensor_stream():
             "y": float(y),
             "v": float(v),
             "mag_yaw": float(mag_yaw),
-            "lat": float(lat),
-            "lon": float(lon)
+            "lat": float(lat_est),
+            "lon": float(lon_est)
         }
 
         # SSE format
