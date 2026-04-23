@@ -276,19 +276,42 @@ function MapView() {
   const [mapReady, setMapReady] = useState(false)
 
   // WebSocket for GPS
-  useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8765")
-    socket.onmessage = (event) => {
+useEffect(() => {
+  const eventSource = new EventSource("http://localhost:5000/stream")
+
+  eventSource.onmessage = (event) => {
+    try {
       const data = JSON.parse(event.data)
-      const isBelow = data.lat < START_LAT
-      const snappedLat = isBelow ? snapLatitude(data.lat) : snapLatitude_grid(data.lat)
-      const snappedLong = isBelow ? snapLongitudeBottom(data.long) : snapLongitude(data.long)
-    
+
+      const lat = data.lat
+      const lon = data.lon  // NOTE: your backend uses "lon", not "long"
+
+      const isBelow = lat < START_LAT
+
+      const snappedLat = isBelow
+        ? snapLatitude(lat)
+        : snapLatitude_grid(lat)
+
+      const snappedLong = isBelow
+        ? snapLongitudeBottom(lon)
+        : snapLongitude(lon)
+
       setLivePoint([snappedLat, snappedLong])
       setRotation(isBelow ? 90 : 0)
+
+    } catch (err) {
+      console.error("Error parsing SSE data:", err)
     }
-    return () => socket.close()
-  }, [])
+  }
+
+  eventSource.onerror = (err) => {
+    console.error("SSE connection error:", err)
+  }
+
+  return () => {
+    eventSource.close()
+  }
+}, [])
 
   // Poll Flask endpoint every second for parking spot states
   useEffect(() => {

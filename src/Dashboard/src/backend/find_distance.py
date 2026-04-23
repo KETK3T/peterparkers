@@ -82,23 +82,25 @@ DISP_W, DISP_H = 640, 480
 CAP_SHAPE = (CAP_H, CAP_W, 3)
 DISP_SHAPE = (DISP_H, DISP_W, 3)
 # SOURCES = [0, 0] #Left, Right
-SOURCES = ['./recordings/20260327_115006_Left.mp4', './recordings/20260327_115006_Right.mp4']
+# SOURCES = ['./Left1.mp4', './Right1.mp4']
+SOURCES = ['./recordings/left_side_cam.mp4', './recordings/right_side_ccam.mp4']
 CAPTURE_FPS = 30
 INFERENCEFPS = 15
 IMGSZ = 128
-CONF = 0.20
-MODEL_PATH = "./models/yolo26x.engine"
+CONF = 0.25
+MODEL_PATH = "./models/yolo11n.engine"
 # MODEL_PATH = "./yolo11n.pt"
+# MODEL_PATH = "./models/yolo26x.engine"
 
 MAX_BATCH = 3
 CLASSES = [2, 3, 5, 7]
 CAM_ORDER = ['Left', 'Right']
-DISPLAY_ORDER = [1, 0]
+DISPLAY_ORDER = [0, 1]
 INF_IDX = [0, 1]
 SPOT_CAMS = {'Left', 'Right'}
 MIN_BOX_H = {'Left': 30, 'Right': 30}  # Ignore detections smaller than this
-INTERSECT_ALLOWANCE = 0.10
-AUTO_CALIBRATE_INTERVAL = 60
+INTERSECT_ALLOWANCE = 0.15
+AUTO_CALIBRATE_INTERVAL = 0
 ROIS = {
     'Left': [
     ],
@@ -109,10 +111,10 @@ ROIS = {
 SPOT_MASK: dict[str, list[np.ndarray]] = {}
 
 CALIB_PARAMS = {
-    'Left': {'vanishing_point': (454, 211), 'near_y': 357, 'far_y': 283,
-             'left_x': 0, 'right_x': 640, 'n_spots': 5, 'n_rows': 1, 'fisheye_distortion': -0.08,
-             'perspective_strength': 0.17, 'min_roi_height': 70,},
-    'Right': {'vanishing_point': (371, 420), 'near_y': 428, 'far_y': 305,
+    'Left': {'vanishing_point': (381, 214), 'near_y': 406, 'far_y': 274,
+             'left_x': 0, 'right_x': 640, 'n_spots': 6, 'n_rows': 1, 'fisheye_distortion': 0.0,
+             'perspective_strength': 0.16, 'min_roi_height': 63},
+    'Right': {'vanishing_point': (277, 223), 'near_y': 451, 'far_y': 337,
               'left_x': 0, 'right_x': 640, 'n_spots': 5, 'n_rows': 1, 'fisheye_distortion': 0.03,
               'perspective_strength': 0.32, 'min_roi_height': 70},
 }
@@ -149,7 +151,9 @@ STOP_EVENT = Event()
 _last_boxes: dict[str, list] = {cam: [] for cam in CAM_ORDER}
 _last_ann_boxes: dict[str, list] = {cam: [] for cam in CAM_ORDER}
 _empty_streak: dict[str, list[int]] = {cam: [] for cam in CAM_ORDER}
-EMPTY_CONFIRM_FRAMES = 5
+_manual_bounds: dict[str, list[float]] = {cam: [] for cam in CAM_ORDER}
+_debug_frames: dict[str, np.ndarray] = {}
+EMPTY_CONFIRM_FRAMES = 3
 
 
 def shm_ndarray(shm: SharedMemory, shape: tuple) -> np.ndarray:
@@ -183,7 +187,8 @@ def check_parking_spots(cam_name: str, disp_boxes: list):
     if len(_empty_streak[cam_name]) != len(masks):
         _empty_streak[cam_name] = [0] * len(masks)
 
-    occupied_pixels = np.zeros((DISP_H, DISP_W), dtype=bool)
+    car_pixels = []
+    # occupied_pixels = np.zeros((DISP_H,DISP_W), dtype=bool)
 
     for box in disp_boxes:
         x1, y1, x2, y2 = box
@@ -194,25 +199,35 @@ def check_parking_spots(cam_name: str, disp_boxes: list):
         x1, y1 = max(0, int(x1)), max(0, int(y1))
         x2, y2 = min(DISP_W, int(x2)), min(DISP_H, int(y2))
         if x2 > x1 and y2 > y1:
-            occupied_pixels[y1:y2, x1:x2] = True
+            m = np.zeros((DISP_H, DISP_W), dtype=bool)
+            m[y1:y2, x1:x2] = True
+            car_pixels.append(m)
+
+    spot_claimed_by = {}
+    for car_mask in car_pixels:
+        best_spot = -1
+        best_overlap = 0
+        for idx, mask in enumerate(masks):
+            overlap = np.count_nonzero(car_mask & mask)
+            if overlap > best_overlap:
+                best_overlap = overlap
+                best_spot = idx
+        if best_spot >= 0 and best_overlap >= masks[best_spot].sum() * INTERSECT_ALLOWANCE:
+            if best_spot not in spot_claimed_by or best_overlap > spot_claimed_by[best_spot]:
+                spot_claimed_by[best_spot] = best_overlap
 
     with store_lock:
         current_states = list(spot_states.get(cam_name, ['Empty'] * len(masks)))
         new_states = list(current_states)
 
-        for idx, mask in enumerate(masks):
-            overlap = np.count_nonzero(occupied_pixels & mask)
-            detected = overlap >= mask.sum() * INTERSECT_ALLOWANCE
-
-            if detected:
+        for idx in range(len(masks)):
+            if idx in spot_claimed_by:
                 new_states[idx] = 'Car'
                 _empty_streak[cam_name][idx] = 0
             else:
                 _empty_streak[cam_name][idx] += 1
-
                 if _empty_streak[cam_name][idx] >= EMPTY_CONFIRM_FRAMES:
                     new_states[idx] = 'Empty'
-
         spot_states[cam_name] = new_states
 
 
@@ -290,7 +305,13 @@ def generate_rois(
 
     def horizontal_bounds(y):
 
-        t = (y - near_y) / (far_y - near_y) if far_y != near_y else 0
+        denominator = vpy - near_y
+        if denominator == 0:
+            denominator = far_y - near_y
+        if denominator == 0:
+            return left_x, right_x
+        t = (y - near_y) / denominator
+        t = max(0.0, min(t, 1.0))
         xl_perspective = left_x + (vpx - left_x) * t
         xr_perspective = right_x + (vpx - right_x) * t
         xl_rect = left_x
@@ -302,7 +323,13 @@ def generate_rois(
         return xl, xr
 
     def scale_x_to_y(x_at_near, y):
-        t = (y - near_y) / (far_y - near_y) if far_y != near_y else 0
+        denominator = vpy - near_y
+        if denominator == 0:
+            denominator = far_y - near_y
+        if denominator == 0:
+            return x_at_near
+        t = (y - near_y) / denominator
+        t = max(0.0, min(t, 1.0))
         return x_at_near + (vpx - x_at_near) * t * perspective_strength
 
     def fisheye(x, y):
@@ -323,10 +350,14 @@ def generate_rois(
 
         for s in range(n_spots):
             if spot_boundaries and len(spot_boundaries) == n_spots + 1:
-                x0_near = scale_x_to_y(spot_boundaries[s], row_near_y)
-                x1_near = scale_x_to_y(spot_boundaries[s + 1], row_near_y)
-                x0_far = scale_x_to_y(spot_boundaries[s], row_far_y)
-                x1_far = scale_x_to_y(spot_boundaries[s + 1], row_far_y)
+                if isinstance(spot_boundaries[0], tuple):
+                    x0_near, x0_far = spot_boundaries[s]
+                    x1_near, x1_far = spot_boundaries[s + 1]
+                else:
+                    x0_near = scale_x_to_y(spot_boundaries[s], row_near_y)
+                    x1_near = scale_x_to_y(spot_boundaries[s + 1], row_near_y)
+                    x0_far = scale_x_to_y(spot_boundaries[s], row_far_y)
+                    x1_far = scale_x_to_y(spot_boundaries[s + 1], row_far_y)
             else:
                 near_xl, near_xr = horizontal_bounds(row_near_y)
                 far_xl, far_xr = horizontal_bounds(row_far_y)
@@ -361,7 +392,10 @@ def auto_caliberate_rois(cam_name: str, frame: np.ndarray, current_params: dict,
     roi_mask[frame.shape[0] // 3:, :] = 255
     edges = cv2.bitwise_and(edges, roi_mask)
     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=60, minLineLength=80, maxLineGap=20)
-
+    left_x = current_params['left_x']
+    right_x = current_params['right_x']
+    near_y = current_params['near_y']
+    far_y_ref = current_params.get('far_y', 0)
     if lines is None or len(lines) < 4:
         print(f"\033[1;91mWarning: [Auto Caliberation] Not enough lines detected, keeping current ROIS\033[0m")
         return None
@@ -369,6 +403,10 @@ def auto_caliberate_rois(cam_name: str, frame: np.ndarray, current_params: dict,
     car_y_exclusions = []
     if detections:
         for x1, y1, x2, y2 in detections:
+            car_cx = (x1 + x2) / 2
+            car_cy = (y1 + y2) / 2
+            if not (left_x <= car_cx <= right_x and far_y_ref <= car_cy <= near_y):
+                continue
             pad = 15
             car_y_exclusions.append((int(y1) - pad, int(y1) + pad))
             car_y_exclusions.append((int(y2) - pad, int(y2) + pad))
@@ -409,24 +447,17 @@ def auto_caliberate_rois(cam_name: str, frame: np.ndarray, current_params: dict,
         print(f"\033[1;91mWarning: [Auto Caliberation] Could not find row boundaries\033[0m")
         return None
 
-    near_y = current_params['near_y']
     min_far_y = near_y - 250
     valid_clusters = [c for c in cluster_centers if min_far_y < c < near_y]
     if not valid_clusters:
         print(f"\033[1;91mWarning: [Auto Caliberation] no valid far_y found\033[0m")
         return None
     far_y = int(min(valid_clusters, key=lambda c: near_y - c))
-    left_x = current_params['left_x']
-    right_x = current_params['right_x']
+
     n_spots = current_params.get('n_spots', 5)
     n_rows = current_params.get('n_rows', 1)
     distortion = current_params.get('fisheye_distortion', 0.0)
     strength = current_params.get('perspective_strength', 1.0)
-
-    # wide = sorted(h_lines, key=lambda l: abs(l[2]-l[0]), reverse=True)[:5]
-    # all_xs = [x for l in wide for x in [l[0], l[2]]]
-    # left_x = max(0, int(min(all_xs)) - 10)
-    # right_x = min(DISP_W, int(max(all_xs)) + 10)
 
     MIN_ROI_HEIGHT = current_params.get('min_roi_height', 60)
 
@@ -435,6 +466,10 @@ def auto_caliberate_rois(cam_name: str, frame: np.ndarray, current_params: dict,
         print(f"\033[1;93mWarning: [Auto Caliberation] far_y too close to near_y, clamped to {far_y}\033[0m")
 
     far_y = max(0, far_y)
+    original_far_y = CALIB_PARAMS[cam_name].get('far_y', far_y)
+    max_drift = 50
+    far_y = max(far_y, original_far_y - max_drift)
+    far_y = min(far_y, original_far_y + max_drift)
     vanish_lines = []
     for l in lines[:]:
         x1, y1, x2, y2 = l[0]
@@ -467,13 +502,21 @@ def auto_caliberate_rois(cam_name: str, frame: np.ndarray, current_params: dict,
     CALIB_PARAMS[cam_name]['far_y'] = far_y
     CALIB_PARAMS[cam_name]['vanishing_point'] = vanishing_point
 
-    if  calib_window.open and calib_window.active_cam == cam_name:
-    	cv2.setTrackbarPos('Far Y', CalibWindow.WIN, far_y)
-    	cv2.setTrackbarPos('VP X', CalibWindow.WIN, vanishing_point[0])
-    	cv2.setTrackbarPos('VP Y', CalibWindow.WIN, vanishing_point[1])
+    if calib_window.open and calib_window.active_cam == cam_name:
+        cv2.setTrackbarPos('Far Y', CalibWindow.WIN, far_y)
+        cv2.setTrackbarPos('VP X', CalibWindow.WIN, vanishing_point[0])
+        cv2.setTrackbarPos('VP Y', CalibWindow.WIN, vanishing_point[1])
 
+    roi_detections = [
+        box for box in (detections or [])
+        if left_x <= (box[0] + box[2]) / 2 <= right_x
+           and far_y <= (box[1] + box[3]) / 2 <= near_y
+    ]
     boundaries, detected_n_spots = detect_spot_boundaries(frame, near_y, far_y, left_x, right_x, n_spots,
-                                                          detections=detections)
+                                                          detections=roi_detections, cam_name=cam_name)
+    manual = _manual_bounds.get(cam_name, [])
+    if manual:
+        boundaries = blend_boundaries(boundaries, manual, manual_weight=0.15)
 
     return generate_rois(cam_id=cam_name, vanishing_point=vanishing_point, near_y=near_y, far_y=far_y, left_x=left_x,
                          right_x=right_x, n_spots=detected_n_spots, n_rows=n_rows, fisheye_distortion=distortion,
@@ -482,7 +525,7 @@ def auto_caliberate_rois(cam_name: str, frame: np.ndarray, current_params: dict,
 
 # ── ROI Editor state ──────────────────────────────────────────────────────────
 
-def rebuild_spot_masks(cam_name: str, new_rois: list[dict]):
+def rebuild_spot_masks(cam_name: str, new_rois: list[dict], reset_states: bool = False):
     global ROIS, SPOT_MASK, spot_states
 
     new_masks = []
@@ -493,8 +536,12 @@ def rebuild_spot_masks(cam_name: str, new_rois: list[dict]):
     with store_lock:
         ROIS[cam_name] = new_rois
         SPOT_MASK[cam_name] = new_masks
-        spot_states[cam_name] = ['Empty'] * len(new_rois)
-        _empty_streak[cam_name] = [0] * len(new_rois)
+
+        if reset_states or len(new_rois) != len(spot_states.get(cam_name, [])):
+            spot_states[cam_name] = ['Empty'] * len(new_rois)
+            _empty_streak[cam_name] = [0] * len(new_rois)
+    # else:
+    # 	_empty_streak[cam_name] = [0] * len(new_rois)
     print(f"\033[1;91mWarning: [Auto Caliberation] {cam_name}: {len(new_rois)} spots rebuilt\033[0m")
 
 
@@ -584,7 +631,7 @@ class ROIEditor:
             else:
                 print("[ROI Editor] OFF")
                 self.points.clear()
-            return True  # consume 'i' so it doesn't quit via 'q' check
+            return True
 
         if not self.editor_mode:
             return False
@@ -803,7 +850,7 @@ def inference_loop(need_annotations: bool, frame_ready_event, stop_event):
         model.fuse()
 
     dummy = np.zeros((IMGSZ, IMGSZ, 3), dtype=np.uint8)
-
+    # model.predict([dummy] * MAX_BATCH, imgsz=IMGSZ, conf=CONF,device='cuda', verbose=False, half=True)
     for _ in range(5):
         model.predict([dummy] * MAX_BATCH, imgsz=IMGSZ, conf=CONF, device='cuda', verbose=False, half=True)
     # model.predict([dummy] * MAX_BATCH, imgsz=IMGSZ, conf=CONF, verbose=False, half=True)
@@ -967,6 +1014,19 @@ def display_loop(stop_event):
 
         cv2.imshow(win, canvas)
 
+        if os.environ.get('CALIB_DEBUG') and _debug_frames:
+            debug_panels = []
+            for cam in CAM_ORDER:
+                p = _debug_frames.get(cam)
+                if p is None:
+                    p = np.zeros((DISP_H, DISP_W, 3), dtype=np.uint8)
+                if p.shape[:2] != (DISP_H, DISP_W):
+                    p = cv2.resize(p, (DISP_W, DISP_H))
+                cv2.putText(p, f'DEBUG: {cam}', (10, 25),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+                debug_panels.append(p)
+            cv2.imshow('boundary_debug', np.hstack(debug_panels))
+
         key = cv2.waitKey(1) & 0xFF
 
         if roi_editor.handle_key(key):
@@ -988,8 +1048,8 @@ def display_loop(stop_event):
             continue
 
         if key == ord('c') or key == ord('C'):
-        	calib_window.toggle(roi_editor.active_cam)
-        	continue
+            calib_window.toggle(roi_editor.active_cam)
+            continue
         if key == ord('q'):
             stop_event.set()
             break
@@ -999,6 +1059,154 @@ def display_loop(stop_event):
 
     calib_window.close()
     cv2.destroyAllWindows()
+
+
+def blend_boundaries(detected: list[float], manual: list[float], manual_weight: float = 0.15) -> list[float]:
+    if not manual or len(detected) != len(manual):
+        return detected
+    result = []
+    for d, m in zip(detected, manual):
+        dn = d[0] if isinstance(d, tuple) else d
+        df = d[1] if isinstance(d, tuple) else d
+        mn = m[0] if isinstance(m, tuple) else m
+
+        angle_offset = df - dn
+        blended_near = dn * (1 - manual_weight) + mn * manual_weight
+        result.append((blended_near, blended_near + angle_offset))
+    return result
+
+
+class CalibWindow:
+    """
+    Separate OpenCV window with trackbars for live CALIB_PARAMS tuning.
+    Opens when C is pressed, closes when C is pressed again.
+    Automatically regenerates ROIs on any slider change.
+    """
+    WIN = 'Calibration'
+
+    def __init__(self):
+        self.open = False
+        self.active_cam = 'Right'  # tracks which cam's params are shown
+        self._last_vals = {}
+        self._pending_update = False
+        self.suppress_auto = False
+
+    def _cam_idx(self):
+        return CAM_ORDER.index(self.active_cam)
+
+    def toggle(self, cam_name: str):
+        self.active_cam = cam_name
+        if self.open:
+            self.close()
+        else:
+            self._build()
+
+    def _build(self):
+        p = CALIB_PARAMS[self.active_cam]
+        cv2.namedWindow(self.WIN, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(self.WIN, 500, 280)
+
+        # Each trackbar: (name, min, max, initial)
+        # Multiply floats by 100 to use int trackbars
+        cv2.createTrackbar('VP X', self.WIN, p['vanishing_point'][0], DISP_W, lambda v: self._on_change())
+        cv2.createTrackbar('VP Y', self.WIN, p['vanishing_point'][1], DISP_H, lambda v: self._on_change())
+        cv2.createTrackbar('Near Y', self.WIN, p['near_y'], DISP_H, lambda v: self._on_change())
+        cv2.createTrackbar('Far Y', self.WIN, p['far_y'], DISP_H, lambda v: self._on_change())
+        cv2.createTrackbar('Left X', self.WIN, p['left_x'], DISP_W, lambda v: self._on_change())
+        cv2.createTrackbar('Right X', self.WIN, p['right_x'], DISP_W, lambda v: self._on_change())
+        cv2.createTrackbar('Spots', self.WIN, p['n_spots'], 20, lambda v: self._on_change())
+        cv2.createTrackbar('Rows', self.WIN, p['n_rows'], 6, lambda v: self._on_change())
+        # fisheye_distortion: range -0.30 to +0.30, stored as int -30..30 (divide by 100)
+        fisheye_int = int(p['fisheye_distortion'] * 100) + 30  # shift so 0 maps to 30
+        cv2.createTrackbar('Fisheye x100', self.WIN, fisheye_int, 60, lambda v: self._on_change())
+        strength_int = int(p.get('perspective_strength', 1.0) * 100)
+        cv2.createTrackbar('Persp x100', self.WIN, strength_int, 100, lambda v: self._on_change())
+        cv2.createTrackbar('Min Height', self.WIN, p.get('min_roi_height', 60), DISP_H, lambda v: self._on_change())
+        self.suppress_auto = True
+        self.open = True
+        print(f"[Calib] Window open for {self.active_cam}. Drag sliders to tune, C to close.")
+
+    def _read(self) -> dict:
+        fisheye_int = cv2.getTrackbarPos('Fisheye x100', self.WIN)
+        return {
+            'vanishing_point': (
+                cv2.getTrackbarPos('VP X', self.WIN),
+                cv2.getTrackbarPos('VP Y', self.WIN),
+            ),
+            'near_y': cv2.getTrackbarPos('Near Y', self.WIN),
+            'far_y': cv2.getTrackbarPos('Far Y', self.WIN),
+            'left_x': cv2.getTrackbarPos('Left X', self.WIN),
+            'right_x': cv2.getTrackbarPos('Right X', self.WIN),
+            'n_spots': max(1, cv2.getTrackbarPos('Spots', self.WIN)),
+            'n_rows': max(1, cv2.getTrackbarPos('Rows', self.WIN)),
+            'fisheye_distortion': (fisheye_int - 30) / 100.0,
+            'perspective_strength': cv2.getTrackbarPos('Persp x100', self.WIN) / 100.0,
+            'min_roi_height': max(20, cv2.getTrackbarPos('Min Height', self.WIN)),
+        }
+
+    def _on_change(self):
+        if self.open:
+            self._pending_update = True
+
+    def tick(self):
+        """Call once per display loop iteration to keep the window alive."""
+        if not self.open:
+            return
+
+        if not self._pending_update:
+            return
+        self._pending_update = False
+
+        try:
+            params = self._read()
+            near_y = params['near_y']
+            far_y = params['far_y']
+            vpy = params['vanishing_point'][1]
+
+            if near_y == far_y or vpy >= near_y:
+                return
+
+            CALIB_PARAMS[self.active_cam] = params
+
+            cam_idx = CAM_ORDER.index(self.active_cam)
+            with RAW_LOCKS[cam_idx]:
+                snap = RAW_BUFS[cam_idx].copy()
+            snap_disp = cv2.resize(snap, (DISP_W, DISP_H), interpolation=cv2.INTER_NEAREST)
+            with store_lock:
+                boxes = _last_boxes.get(self.active_cam, [])
+            boundaries, detected_n = detect_spot_boundaries(
+                snap_disp, near_y, far_y,
+                params['left_x'], params['right_x'], params['n_spots'],
+                detections=boxes, cam_name=self.active_cam
+            )
+            roi_params = {k: v for k, v in params.items() if k not in ('min_roi_height',)}
+            new_rois = generate_rois(
+                cam_id=self.active_cam,
+                n_spots=detected_n,
+                spot_boundaries=boundaries,
+                **{k: v for k, v in roi_params.items() if k != 'n_spots'},
+            )
+            if new_rois:
+                rebuild_spot_masks(self.active_cam, new_rois)
+                n = params['n_spots']
+                manual = [params['left_x'] + (params['right_x'] - params['left_x']) * i / n for i in range(n + 1)]
+                _manual_bounds[self.active_cam] = manual
+        except Exception as e:
+            print(f"[Calib] tick error: {e}")
+
+    def close(self):
+        if self.open:
+            try:
+                cv2.destroyWindow(self.WIN)
+            except Exception:
+                pass
+            self.open = False
+            self.suppress_auto = False
+            print(f"[Calib] Window closed. Final params for {self.active_cam}:")
+            print(f"  CALIB_PARAMS['{self.active_cam}'] = {CALIB_PARAMS[self.active_cam]}")
+
+
+calib_window = CalibWindow()
 
 
 def record_loop(stop_event, use_anns=False):
@@ -1064,6 +1272,8 @@ def auto_calibrate_loop(stop_event):
             if cam_name not in SPOT_CAMS:
                 continue
 
+            if calib_window.suppress_auto and calib_window.active_cam == cam_name:
+                continue
             try:
                 with RAW_LOCKS[idx]:
                     snap = RAW_BUFS[idx].copy()
@@ -1086,108 +1296,6 @@ def auto_calibrate_loop(stop_event):
             except Exception as e:
                 print(f'[Auto Calibrate] {cam_name} error: {e}')
 
-class CalibWindow:
-	"""
-	Separate OpenCV window with trackbars for live CALIB_PARAMS tuning.
-	Opens when C is pressed, closes when C is pressed again.
-	Automatically regenerates ROIs on any slider change.
-	"""
-	WIN = 'Calibration'
-
-	def __init__(self):
-		self.open = False
-		self.active_cam = 'Right'  # tracks which cam's params are shown
-		self._last_vals = {}
-
-	def _cam_idx(self):
-		return CAM_ORDER.index(self.active_cam)
-
-	def toggle(self, cam_name: str):
-		self.active_cam = cam_name
-		if self.open:
-			self.close()
-		else:
-			self._build()
-
-	def _build(self):
-		p = CALIB_PARAMS[self.active_cam]
-		cv2.namedWindow(self.WIN, cv2.WINDOW_NORMAL)
-		cv2.resizeWindow(self.WIN, 500, 280)
-
-		# Each trackbar: (name, min, max, initial)
-		# Multiply floats by 100 to use int trackbars
-		cv2.createTrackbar('VP X',        self.WIN, p['vanishing_point'][0],  DISP_W,     lambda v: self._on_change())
-		cv2.createTrackbar('VP Y',        self.WIN, p['vanishing_point'][1],  DISP_H,     lambda v: self._on_change())
-		cv2.createTrackbar('Near Y',      self.WIN, p['near_y'],              DISP_H,     lambda v: self._on_change())
-		cv2.createTrackbar('Far Y',       self.WIN, p['far_y'],               DISP_H,     lambda v: self._on_change())
-		cv2.createTrackbar('Left X',      self.WIN, p['left_x'],              DISP_W,     lambda v: self._on_change())
-		cv2.createTrackbar('Right X',     self.WIN, p['right_x'],             DISP_W,     lambda v: self._on_change())
-		cv2.createTrackbar('Spots',       self.WIN, p['n_spots'],             20,          lambda v: self._on_change())
-		cv2.createTrackbar('Rows',        self.WIN, p['n_rows'],              6,           lambda v: self._on_change())
-		# fisheye_distortion: range -0.30 to +0.30, stored as int -30..30 (divide by 100)
-		fisheye_int = int(p['fisheye_distortion'] * 100) + 30  # shift so 0 maps to 30
-		cv2.createTrackbar('Fisheye x100', self.WIN, fisheye_int,             60,          lambda v: self._on_change())
-		strength_int = int(p.get('perspective_strength', 1.0) * 100)
-		cv2.createTrackbar('Persp x100', self.WIN, strength_int, 100, lambda v: self._on_change())
-		self.open = True
-		cv2.createTrackbar('Min Height', self.WIN, p.get('min_roi_height', 60), DISP_H, lambda v: self._on_change())
-		print(f"[Calib] Window open for {self.active_cam}. Drag sliders to tune, C to close.")
-
-	def _read(self) -> dict:
-		fisheye_int = cv2.getTrackbarPos('Fisheye x100', self.WIN)
-		return {
-			'vanishing_point': (
-				cv2.getTrackbarPos('VP X',    self.WIN),
-				cv2.getTrackbarPos('VP Y',    self.WIN),
-			),
-			'near_y':             cv2.getTrackbarPos('Near Y',   self.WIN),
-			'far_y':              cv2.getTrackbarPos('Far Y',    self.WIN),
-			'left_x':             cv2.getTrackbarPos('Left X',   self.WIN),
-			'right_x':            cv2.getTrackbarPos('Right X',  self.WIN),
-			'n_spots':   max(1,   cv2.getTrackbarPos('Spots',    self.WIN)),
-			'n_rows':    max(1,   cv2.getTrackbarPos('Rows',     self.WIN)),
-			'fisheye_distortion': (fisheye_int - 30) / 100.0,
-			'perspective_strength': cv2.getTrackbarPos('Persp x100', self.WIN) / 100.0,
-			'min_roi_height': max(20, cv2.getTrackbarPos('Min Height', self.WIN)),
-		}
-
-	def _on_change(self):
-		if not self.open:
-			return
-		try:
-			params = self._read()
-			# Guard against degenerate near_y == far_y
-			if params['near_y'] == params['far_y']:
-				return
-			CALIB_PARAMS[self.active_cam] = params
-			roi_params = {k: v for k, v in params.items() if k not in ('min_roi_height',)}
-			new_rois = generate_rois(
-				cam_id=self.active_cam,
-				**roi_params,
-			)
-			if new_rois:
-				rebuild_spot_masks(self.active_cam, new_rois)
-		except Exception as e:
-			print(f"[Calib] _on_change error: {e}")
-
-	def tick(self):
-		"""Call once per display loop iteration to keep the window alive."""
-		if self.open:
-			cv2.waitKey(1)
-
-	def close(self):
-		if self.open:
-			try:
-				cv2.destroyWindow(self.WIN)
-			except Exception:
-				pass
-			self.open = False
-			print(f"[Calib] Window closed. Final params for {self.active_cam}:")
-			print(f"  CALIB_PARAMS['{self.active_cam}'] = {CALIB_PARAMS[self.active_cam]}")
-
-
-calib_window = CalibWindow()
-
 
 def merge_narrow_spots(boundaries: list[float], min_width: float = 80.0) -> list[float]:
     if len(boundaries) < 2:
@@ -1207,66 +1315,96 @@ def merge_narrow_spots(boundaries: list[float], min_width: float = 80.0) -> list
 
 
 def detect_spot_boundaries(frame: np.ndarray, near_y: int, far_y: int, left_x: int, right_x: int, n_spots: int,
-                           detections: list = None) -> tuple[list[float], int]:
+                           detections: list = None, cam_name: str = None) -> tuple[list[float], int]:
     uniform = [left_x + (right_x - left_x) * i / n_spots for i in range(n_spots + 1)]
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (3, 3), 0)
-    edges = cv2.Canny(blur, 30, 100)
+    _, white_mask = cv2.threshold(gray, 160, 255, cv2.THRESH_BINARY)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    white_mask = cv2.morphologyEx(white_mask, cv2.MORPH_CLOSE, kernel)
+    # blur = cv2.GaussianBlur(gray, (3,3), 0)
+    edges = cv2.Canny(white_mask, 50, 150)
 
     roi_mask = np.zeros_like(edges)
     band_top = max(0, far_y - 10)
     roi_mask[band_top:near_y + 10, left_x:right_x] = 255
     edges = cv2.bitwise_and(edges, roi_mask)
 
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=30, minLineLength=30, maxLineGap=15)
-
-    if lines is None:
-        return _try_from_cars(detections, near_y, left_x, right_x, n_spots, uniform)
-
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=20, minLineLength=25, maxLineGap=30)
     divider_xs = []
     for l in lines:
         x1, y1, x2, y2 = l[0]
         angle = abs(np.degrees(np.arctan2(y2 - y1, x2 - x1)))
-        if 60 < angle < 120:
+        if 45 < angle < 135:
 
             if y2 != y1:
                 t = (near_y - y1) / (y2 - y1)
                 x_at_near = x1 + t * (x2 - x1)
+                t_far = (far_y - y1) / (y2 - y1)
+                x_far = x1 + t_far * (x2 - x1)
             else:
-                x_at_near = (x1 + x2) / 2
+                x_at_near = x_far = (x1 + x2) / 2
             if left_x <= x_at_near <= right_x:
-                divider_xs.append(x_at_near)
-    if len(divider_xs) < 2:
+                divider_xs.append((x_at_near, x_far))
+    if os.environ.get('CALIB_DEBUG'):
+        dbg = frame.copy()
+        if lines is not None:
+            for l in lines:
+                x1, y1, x2, y2 = l[0]
+                angle = abs(np.degrees(np.arctan2(y2 - y1, x2 - x1)))
+                if 45 < angle < 135:
+                    cv2.line(dbg, (x1, y1), (x2, y2), (255, 0, 0), 1)
+        for xn, xf in divider_xs:
+            cv2.line(dbg, (int(xn), near_y), (int(xf), far_y), (0, 255, 0), 2)
+        cv2.line(dbg, (left_x, near_y), (right_x, near_y), (0, 200, 255), 1)
+        cv2.line(dbg, (left_x, far_y), (right_x, far_y), (0, 200, 255), 1)
+        if cam_name:
+            _debug_frames[cam_name] = dbg
+
+    if lines is None or len(divider_xs) < 2:
         return _try_from_cars(detections, near_y, left_x, right_x, n_spots, uniform)
 
-    divider_xs = sorted(divider_xs)
+    divider_xs.sort(key=lambda d: d[0])
     clustered = []
     group = [divider_xs[0]]
     for x in divider_xs[1:]:
-        if x - group[0] < 20:
+        if x[0] - group[0][0] < 20:
             group.append(x)
         else:
-            clustered.append(np.mean(group))
+            clustered.append((np.mean([g[0] for g in group]), np.mean([g[1] for g in group])))
             group = [x]
-    clustered.append(np.mean(group))
+    clustered.append((np.mean([g[0] for g in group]), np.mean([g[1] for g in group])))
 
-    boundaries = sorted(set([left_x] + clustered + [right_x]))
+    xs_near = [left_x] + [c[0] for c in clustered] + [right_x]
+    xs_far = [left_x] + [c[1] for c in clustered] + [right_x]
+    all_bounds = sorted(zip(xs_near, xs_far), key=lambda p: p[0])
+    xs_near = [p[0] for p in all_bounds]
+    xs_far = [p[1] for p in all_bounds]
 
-    if len(boundaries) == n_spots + 1:
-        boundaries = merge_narrow_spots(boundaries)
-        return boundaries, len(boundaries) - 1
+    paired = list(zip(xs_near, xs_far))
+    merged_pairs = [paired[0]]
+    for i in range(1, len(paired)):
+        width = paired[i][0] - merged_pairs[-1][0]
+        if width >= 80.0 or len(merged_pairs) == 1:
+            merged_pairs.append(paired[i])
+        else:
+            merged_pairs[-1] = paired[i]
+    xs_far = [p[1] for p in merged_pairs]
+    xs_near = [p[0] for p in merged_pairs]
+    if len(xs_near) == n_spots + 1:
+        return list(zip(xs_near, xs_far)), len(xs_near) - 1
 
-    if len(boundaries) > n_spots + 1:
-        interior = boundaries[1: -1]
-        expected_spacing = (right_x - left_x) / n_spots
-        best = []
+    if len(xs_near) > n_spots + 1:
+        expected = (right_x - left_x) / n_spots
+        best_near, best_far = [left_x], [left_x]
+        interior = list(zip(xs_near[1:-1], xs_far[1:-1]))
         for i in range(1, n_spots):
-            target = left_x + expected_spacing * i
-            closest = min(interior, key=lambda x: abs(x - target))
-            best.append(closest)
-        boundaries = sorted([left_x] + best + [right_x])
-        boundaries = merge_narrow_spots(boundaries)
-        return boundaries, len(boundaries) - 1
+            target = left_x + expected * i
+            closest = min(interior, key=lambda p: abs(p[0] - target))
+            best_near.append(closest[0])
+            best_far.append(closest[1])
+        best_near.append(right_x)
+        best_far.append(right_x)
+        return list(zip(best_near, best_far)), len(best_near) - 1
 
     return _try_from_cars(detections, near_y, left_x, right_x, n_spots, uniform)
 
@@ -1296,7 +1434,7 @@ def _try_from_cars(detections, near_y, left_x, right_x, n_spots, fallback):
         boundaries = merge_narrow_spots(boundaries)
         return boundaries, len(boundaries) - 1
     fallback = merge_narrow_spots(fallback)
-    return fallback, len(fallback) - 1
+    return [(x, x) for x in fallback], len(fallback) - 1
 
 
 @atexit.register
@@ -1415,10 +1553,10 @@ if __name__ == "__main__":
     )
     inf_t.start()
     Thread(
-        target=lambda: app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False, threaded=True),
+        target=lambda: app.run(host='localhost', port=5001, debug=False, use_reloader=False, threaded=True),
         daemon=True,
     ).start()
-    print('Flask Api -> http://0.0.0.0/detections')
+    print('Flask Api -> http:/localhost/detections')
 
     if args.record:
         rec_t = Thread(target=record_loop, args=(STOP_EVENT, args.annotate), daemon=True)

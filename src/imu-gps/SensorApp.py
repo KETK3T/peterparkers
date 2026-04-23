@@ -138,7 +138,7 @@ def sensor_stream():
 
         # Extract state
         x, y, v, mag_yaw = ekf.x.flatten()
-        print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, mag_yaw={np.degrees(mag_yaw):.1f} degrees")    # Converts heading to degrees for easier comprehension
+        #print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, mag_yaw={np.degrees(mag_yaw):.1f} degrees")    # Converts heading to degrees for easier comprehension
 
         # Saves state in testing output CSV file
         with open(path, "a", newline="", encoding="utf-8") as f:
