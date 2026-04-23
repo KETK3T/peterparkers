@@ -166,7 +166,9 @@ def sensor_stream():
 
 @app.route('/stream')
 def stream():
-    return Response(sensor_stream(), mimetype='text/event-stream')
+    return Response(sensor_stream(), mimetype='text/event-stream',
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})  # important for streaming
+
 
 
 if __name__ == "__main__":

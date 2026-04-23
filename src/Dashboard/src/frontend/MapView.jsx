@@ -280,11 +280,15 @@ useEffect(() => {
   const eventSource = new EventSource("http://localhost:5000/stream")
 
   eventSource.onmessage = (event) => {
+
+      console.log("RAW EVENT:", event.data) //log to see if update
     try {
       const data = JSON.parse(event.data)
 
       const lat = data.lat
       const lon = data.lon  // NOTE: your backend uses "lon", not "long"
+
+      console.log("LAT/LON:", lat, lon)
 
       const isBelow = lat < START_LAT
 

@@ -75,21 +75,6 @@ run flask app first
 npm run dev
 click local server
 
-Sensor Testing Set Up:
-
-Backend:
-source ~/parker-env/bin/activate
-python ./src/Dashboard/src/backend/SensorApp-Test.py
-python ./src/Dashboard/src/backend/SensorApp.py
-click local server > Firefox
-
-Frontend:
-bash terminal
-python ./src/Dashboard/src/backend/server.py
-cd src/Dashboard
-npm run dev
-click local server > Firefox
-
 Testing model and 3 cams:
 python ./src/Dashboard/src/backend/find_distance.py -r #Allows you to record
 (alt: -r, --record,  -R)
@@ -105,3 +90,22 @@ Running it without args auto runs the server for streaming
 imu-gps path
 sensor_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../imu-gps'))
 sys.path.append(sensor_path)
+
+How to run application:
+
+Backend:
+--- This needs to be set up before frontend! ---
+Set up linux backend terminal
+While in peterparkers folder run commands ->
+source ~/parker-env/bin/activate
+python ./src/imu-gps/SensorApp.py
+Click local server > Firefox
+(Might need to run/try twice if there is uni-code error)
+
+Frontend:
+Set up bash or linux frontend terminal
+while in peterparkers folder run commands ->
+cd src/Dashboard
+npm run dev
+click local server -> Firefox
+

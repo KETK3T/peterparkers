@@ -54,7 +54,7 @@ def sensor_stream():
 
         imu.accel = float(row["imu-ax"]), float(row["imu-ay"]), float(row["imu-az"])
         imu.gyro = float(row["imu-gz"]), float(row["imu-gy"]), float(row["imu-gz"])
-        imu.mag = float(row["imu-mz"]), float(row["imu-my"]), float(row["imu-mz"])
+        imu.mag = float(row["imu-mx"]), float(row["imu-my"]), float(row["imu-mz"])
 
         gps.latitude = float(row["gps-lat"])
         gps.longitude = float(row["gps-long"])
@@ -143,12 +143,13 @@ def sensor_stream():
         if data_idx >= len(data):
             print("Done!")
             break
-        time.sleep(0.0008)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
+        time.sleep(0.01)  # Sleep to prevent busy loop, adjust as needed for IMU rate (562 Hz?)
 
 
 @app.route('/stream')
 def stream():
-    return Response(sensor_stream(), mimetype='text/event-stream')
+    return Response(sensor_stream(), mimetype='text/event-stream',
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 if __name__ == "__main__":
