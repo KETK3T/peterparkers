@@ -22,6 +22,10 @@ app = Flask(__name__)
 from flask_cors import CORS
 CORS(app)
 
+ekf = EKF()
+myIMU = IMU()
+myGPS = GPS()
+
 def sensor_stream():
     # For testing purposes
     # This creates a CSV file that will store the raw data and the EKF predictions for each loop iteration
@@ -44,10 +48,6 @@ def sensor_stream():
     prev_gps_x = None
     prev_gps_y = None
     prev_gps_time = None
-
-    ekf = EKF()
-    myIMU = IMU()
-    myGPS = GPS()
 
     prev_time = time.time()
 
@@ -163,9 +163,9 @@ def sensor_stream():
         # Extract state
         x, y, v, mag_yaw = ekf.x.flatten()
         # print(f"x={x:.2f}, y={y:.2f}, v={v:.2f}, mag_yaw={np.degrees(mag_yaw):.1f} rad")
-        R = 6378137  # Earth radius
-        lat_est = lat_init + (y / R) * (180 / np.pi)
-        lon_est = lon_init + (x / (R * np.cos(np.radians(lat_init)))) * (180 / np.pi)
+        #R = 6378137  # Earth radius
+        #lat_est = lat_init + (y / R) * (180 / np.pi)
+        #lon_est = lon_init + (x / (R * np.cos(np.radians(lat_init)))) * (180 / np.pi)
 
         # Saves state in testing output CSV file
         with open(path, "a", newline="", encoding="utf-8") as f:
@@ -181,8 +181,8 @@ def sensor_stream():
             "y": float(y),
             "v": float(v),
             "mag_yaw": float(mag_yaw),
-            "lat": float(lat_est),
-            "lon": float(lon_est)
+            "lat": float(lat),
+            "lon": float(lon)
         }
 
         # SSE format
