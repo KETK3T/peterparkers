@@ -1,0 +1,278 @@
+\doxysection{imu.\+IMU Class Reference}
+\hypertarget{classimu_1_1_i_m_u}{}\label{classimu_1_1_i_m_u}\index{imu.IMU@{imu.IMU}}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{classimu_1_1_i_m_u_a631232665598b65683e86af29b622929}{\+\_\+\+\_\+init\+\_\+\+\_\+}} (self)
+\item 
+\doxymbox{\hyperlink{classimu_1_1_i_m_u_a6d77f0570a889784761644fbb1efce23}{\+\_\+\+\_\+str\+\_\+\+\_\+}} (self)
+\item 
+\doxymbox{\hyperlink{classimu_1_1_i_m_u_af30a6a076490a044d2dfb9dbd6b34595}{update\+\_\+loop}} (self)
+\item 
+\doxymbox{\hyperlink{classimu_1_1_i_m_u_a8c523158faa19b7e074e62c4c0c36dfb}{get\+\_\+accel}} (self)
+\item 
+\doxymbox{\hyperlink{classimu_1_1_i_m_u_a17050a901fcacbf3114f4e01104455e1}{get\+\_\+gyro}} (self)
+\item 
+\doxymbox{\hyperlink{classimu_1_1_i_m_u_a42154722d3ff411dad17305ea27a8e9a}{get\+\_\+magn}} (self)
+\item 
+\doxymbox{\hyperlink{classimu_1_1_i_m_u_ae4f6d1d2baa96b3f2a40de9675b6c5ca}{stop}} (self)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{classimu_1_1_i_m_u_af7f7c8fe0f8afb7112660f74b626de88}{sensor}} = adafruit\+\_\+icm20x.\+ICM20948(i2c)
+\item 
+bool \doxymbox{\hyperlink{classimu_1_1_i_m_u_a0836cf6f1641694ad149befd61b4a120}{running}} = True
+\item 
+\doxymbox{\hyperlink{classimu_1_1_i_m_u_a3c2cdcf85be6a247bc7df44d1dd236ed}{accel}} = self.\+sensor.\+acceleration
+\item 
+\doxymbox{\hyperlink{classimu_1_1_i_m_u_a2176f3c09d8732c728d5b7fbc50cb2da}{gyro}} = self.\+sensor.\+gyro
+\item 
+\doxymbox{\hyperlink{classimu_1_1_i_m_u_abec9e0fd52300bcba0ea47be494ada58}{magnetic}} = self.\+sensor.\+magnetic
+\item 
+bool \doxymbox{\hyperlink{classimu_1_1_i_m_u_a5ae1f6a5bd569b64203f6d1da72d686f}{new\+\_\+data}} = False
+\item 
+\doxymbox{\hyperlink{classimu_1_1_i_m_u_a1c317491a4ddec313bc87228d650eb94}{thread}} = threading.\+Thread(target=self.\+update\+\_\+loop, daemon=True)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00015}{15}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+
+
+\label{doc-constructors}
+\Hypertarget{classimu_1_1_i_m_u_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classimu_1_1_i_m_u_a631232665598b65683e86af29b622929}\index{imu.IMU@{imu.IMU}!\_\_init\_\_@{\_\_init\_\_}}
+\index{\_\_init\_\_@{\_\_init\_\_}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{\_\_init\_\_()}{\_\_init\_\_()}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_a631232665598b65683e86af29b622929} 
+imu.\+IMU.\+\_\+\+\_\+init\+\_\+\+\_\+ (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00016}{16}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00016\ \ \ \ \ \textcolor{keyword}{def\ }\_\_init\_\_(self):}
+\DoxyCodeLine{00017\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00018\ \ \ \ \ \ \ \ \ i2c\ =\ board.I2C()}
+\DoxyCodeLine{00019\ \ \ \ \ \ \ \ \ self.sensor\ =\ adafruit\_icm20x.ICM20948(i2c)}
+\DoxyCodeLine{00020\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#self.rate\ =\ rate\_hz}}
+\DoxyCodeLine{00021\ \ \ \ \ \ \ \ \ self.running\ =\ \textcolor{keyword}{True}}
+\DoxyCodeLine{00022\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ self.accel\ =\ self.sensor.acceleration\textcolor{comment}{\#\ m/s\string^2}}
+\DoxyCodeLine{00024\ \ \ \ \ \ \ \ \ self.gyro\ =\ \ self.sensor.gyro\ \textcolor{comment}{\#rad/s}}
+\DoxyCodeLine{00025\ \ \ \ \ \ \ \ \ self.magnetic\ =\ self.sensor.magnetic\ \textcolor{comment}{\#\ uT}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ new\ data\ flag}}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ self.new\_data\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ start\ background\ thread}}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ self.thread\ =\ threading.Thread(target=self.update\_loop,\ daemon=\textcolor{keyword}{True})}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ self.thread.start()}
+\DoxyCodeLine{00033\ \ \ \ \ }
+
+\end{DoxyCode}
+
+
+\label{doc-func-members}
+\Hypertarget{classimu_1_1_i_m_u_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classimu_1_1_i_m_u_a6d77f0570a889784761644fbb1efce23}\index{imu.IMU@{imu.IMU}!\_\_str\_\_@{\_\_str\_\_}}
+\index{\_\_str\_\_@{\_\_str\_\_}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{\_\_str\_\_()}{\_\_str\_\_()}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_a6d77f0570a889784761644fbb1efce23} 
+imu.\+IMU.\+\_\+\+\_\+str\+\_\+\+\_\+ (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00034}{34}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keyword}{def\ }\_\_str\_\_(self):}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \ \ \ \ f\textcolor{stringliteral}{"{}Acceleration:\ X:\{self.accel[0]:.3f\},\ Y:\{self.accel[1]:.3f\},\ Z:\{self.accel[2]:.3f\}\ m/s\string^2\(\backslash\)n"{}}}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \ \ \ \ f\textcolor{stringliteral}{"{}Gyroscope:\ X:\{self.gyro[0]:.3f\},\ Y:\{self.gyro[1]:.3f\},\ Z:\{self.gyro[2]:.3f\}\ rads/s\(\backslash\)n"{}}}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \ \ \ \ f\textcolor{stringliteral}{"{}Magnetometer:\ X:\{self.magnetic[0]:.3f\},\ Y:\{self.magnetic[1]:.3f\},\ Z:\{self.magnetic[2]:.3f\}\ uT\(\backslash\)n"{}}}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ )}
+\DoxyCodeLine{00040\ }
+
+\end{DoxyCode}
+\Hypertarget{classimu_1_1_i_m_u_a8c523158faa19b7e074e62c4c0c36dfb}\index{imu.IMU@{imu.IMU}!get\_accel@{get\_accel}}
+\index{get\_accel@{get\_accel}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{get\_accel()}{get\_accel()}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_a8c523158faa19b7e074e62c4c0c36dfb} 
+imu.\+IMU.\+get\+\_\+accel (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00050}{50}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keyword}{def\ }get\_accel(self):}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ self.accel}
+\DoxyCodeLine{00052\ \ \ \ \ }
+
+\end{DoxyCode}
+\Hypertarget{classimu_1_1_i_m_u_a17050a901fcacbf3114f4e01104455e1}\index{imu.IMU@{imu.IMU}!get\_gyro@{get\_gyro}}
+\index{get\_gyro@{get\_gyro}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{get\_gyro()}{get\_gyro()}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_a17050a901fcacbf3114f4e01104455e1} 
+imu.\+IMU.\+get\+\_\+gyro (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00053}{53}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{def\ }get\_gyro(self):}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ self.gyro}
+\DoxyCodeLine{00055\ }
+
+\end{DoxyCode}
+\Hypertarget{classimu_1_1_i_m_u_a42154722d3ff411dad17305ea27a8e9a}\index{imu.IMU@{imu.IMU}!get\_magn@{get\_magn}}
+\index{get\_magn@{get\_magn}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{get\_magn()}{get\_magn()}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_a42154722d3ff411dad17305ea27a8e9a} 
+imu.\+IMU.\+get\+\_\+magn (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00056}{56}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keyword}{def\ }get\_magn(self):}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ self.new\_data\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ self.magnetic}
+\DoxyCodeLine{00059\ }
+
+\end{DoxyCode}
+\Hypertarget{classimu_1_1_i_m_u_ae4f6d1d2baa96b3f2a40de9675b6c5ca}\index{imu.IMU@{imu.IMU}!stop@{stop}}
+\index{stop@{stop}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{stop()}{stop()}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_ae4f6d1d2baa96b3f2a40de9675b6c5ca} 
+imu.\+IMU.\+stop (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00060}{60}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keyword}{def\ }stop(self):}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ self.running\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ self.thread.join()}
+
+\end{DoxyCode}
+\Hypertarget{classimu_1_1_i_m_u_af30a6a076490a044d2dfb9dbd6b34595}\index{imu.IMU@{imu.IMU}!update\_loop@{update\_loop}}
+\index{update\_loop@{update\_loop}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{update\_loop()}{update\_loop()}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_af30a6a076490a044d2dfb9dbd6b34595} 
+imu.\+IMU.\+update\+\_\+loop (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00041}{41}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keyword}{def\ }update\_loop(self):}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#period\ =\ 1\ /\ self.rate}}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ self.running:}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \ \ \ \ self.accel\ =\ self.sensor.acceleration}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \ \ \ \ self.gyro\ =\ self.sensor.gyro}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \ \ \ \ self.magnetic\ =\ self.sensor.magnetic}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \ \ \ \ self.new\_data\ =\ \textcolor{keyword}{True}}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#time.sleep(period)}}
+\DoxyCodeLine{00049\ }
+
+\end{DoxyCode}
+
+
+\label{doc-variable-members}
+\Hypertarget{classimu_1_1_i_m_u_doc-variable-members}
+\doxysubsection{Member Data Documentation}
+\Hypertarget{classimu_1_1_i_m_u_a3c2cdcf85be6a247bc7df44d1dd236ed}\index{imu.IMU@{imu.IMU}!accel@{accel}}
+\index{accel@{accel}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{accel}{accel}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_a3c2cdcf85be6a247bc7df44d1dd236ed} 
+imu.\+IMU.\+accel = self.\+sensor.\+acceleration}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00023}{23}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+\Hypertarget{classimu_1_1_i_m_u_a2176f3c09d8732c728d5b7fbc50cb2da}\index{imu.IMU@{imu.IMU}!gyro@{gyro}}
+\index{gyro@{gyro}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{gyro}{gyro}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_a2176f3c09d8732c728d5b7fbc50cb2da} 
+imu.\+IMU.\+gyro = self.\+sensor.\+gyro}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00024}{24}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+\Hypertarget{classimu_1_1_i_m_u_abec9e0fd52300bcba0ea47be494ada58}\index{imu.IMU@{imu.IMU}!magnetic@{magnetic}}
+\index{magnetic@{magnetic}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{magnetic}{magnetic}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_abec9e0fd52300bcba0ea47be494ada58} 
+imu.\+IMU.\+magnetic = self.\+sensor.\+magnetic}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00025}{25}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+\Hypertarget{classimu_1_1_i_m_u_a5ae1f6a5bd569b64203f6d1da72d686f}\index{imu.IMU@{imu.IMU}!new\_data@{new\_data}}
+\index{new\_data@{new\_data}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{new\_data}{new\_data}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_a5ae1f6a5bd569b64203f6d1da72d686f} 
+bool imu.\+IMU.\+new\+\_\+data = False}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00028}{28}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+\Hypertarget{classimu_1_1_i_m_u_a0836cf6f1641694ad149befd61b4a120}\index{imu.IMU@{imu.IMU}!running@{running}}
+\index{running@{running}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{running}{running}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_a0836cf6f1641694ad149befd61b4a120} 
+bool imu.\+IMU.\+running = True}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00021}{21}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+\Hypertarget{classimu_1_1_i_m_u_af7f7c8fe0f8afb7112660f74b626de88}\index{imu.IMU@{imu.IMU}!sensor@{sensor}}
+\index{sensor@{sensor}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{sensor}{sensor}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_af7f7c8fe0f8afb7112660f74b626de88} 
+imu.\+IMU.\+sensor = adafruit\+\_\+icm20x.\+ICM20948(i2c)}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00019}{19}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+\Hypertarget{classimu_1_1_i_m_u_a1c317491a4ddec313bc87228d650eb94}\index{imu.IMU@{imu.IMU}!thread@{thread}}
+\index{thread@{thread}!imu.IMU@{imu.IMU}}
+\doxysubsubsection{\texorpdfstring{thread}{thread}}
+{\footnotesize\ttfamily \label{classimu_1_1_i_m_u_a1c317491a4ddec313bc87228d650eb94} 
+imu.\+IMU.\+thread = threading.\+Thread(target=self.\+update\+\_\+loop, daemon=True)}
+
+
+
+Definition at line \doxymbox{\hyperlink{imu_8py_source_l00031}{31}} of file \doxymbox{\hyperlink{imu_8py_source}{imu.\+py}}.
+
+
+
+The documentation for this class was generated from the following file:\+\begin{DoxyCompactItemize}
+\item 
+src/\+imu-\/gps/\+\doxymbox{\hyperlink{imu_8py}{imu.\+py}}\end{DoxyCompactItemize}

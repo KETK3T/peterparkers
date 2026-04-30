@@ -1,3 +1,6 @@
+##  @file localization.py
+#   @breif Utility to localize gps
+
 import numpy as np
 from imu import IMU
 from gps import GPS

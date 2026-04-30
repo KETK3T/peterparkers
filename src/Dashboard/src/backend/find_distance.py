@@ -1,31 +1,47 @@
-"""
-Usage:
-python find_distance.py                         Flask Api with no visible annotations
-python find_distance.py -T, -t, --test          Display for testing and to confirm correct visuals
-python find_distance.py -r,--record             Recording
-python find_distance.py -T,-r                   display and record
-pyhton find_distance.py -r -a                   Record with annotations
+## @file find_distance.py
+# @breif Smart parking solution designed to help drivers efficiently locate available parking spaces at busy locations, such as university campus.
+# 
+# Captures frames from two cameras (left and right), runs batched YOLO inference to detect vehicle, and determines parking spot occupancy by checking bounding box
+# ovelap against pre-defined ROI polygons. Results are streamed via a Flask REST API, with optional visualization and recording functionality.
+# 
+# @section usage Usage
+# @code
+# python find_distance.py                         # Headless mode: Flask API only
+# python find_distance.py -T, -t, --test          # Display window for visual testing
+# python find_distance.py -r,--record             # Record raw frames to disk
+# python find_distance.py -T,-r                   # Display and record simultaneously
+# pyhton find_distance.py -r -a                   # Record with detection annotations
+# @endcode
+# 
+# @section cores CPU Core Affinity Layout
+# Machine: Jetson Orin Nano
+# CPU core layout
+# core 0 - Main / Flask API
+# core 1 - camera 0 capture process
+# core 2 - camera 1 capture process
+# core 3 - Auto Calibration thread
+# core 4 - Yolo inference thread
+# core 5 - Display / Record thread
+# 
+# @section roi_editor ROI Editor (requires -T / --test)
+# 
+#  | Key        | Action |
+#  |------------|--------|
+#  | I          | Toggle editor on/off |
+#  | Left click | Add point to current polygon |
+#  | Right click| Undo last point |
+#  | Enter      | Finish polygon and print coordinates to terminal |
+#  | Backspace  | Clear all points for current polygon |
+#  | Tab        | Cycle active camera (Left / Right) |
+#  | Q          | Quit |
+#
+# @warning Always read the printed warnings
+#
+# @note TensorRt export command:
+# @code
+# yolo export model=yolo11n.pt format=engine half=true device=0 imgsz=128 batch=3
+# @endcode
 
-CPU core layout
-core 0 - Main
-core 1 - cam 0
-core 2 - cam 1
-core 3 - cam 2
-core 4 - inference thread
-core 5 - Display and record
-
-ROI Editor (requires -T/-t / --test):
-  Press I         Toggle ROI editor mode on/off
-  Left click      Add a point to the current polygon
-  Right click     Undo the last point
-  Enter           Finish current polygon and print to terminal
-  Backspace       Clear all points for the current polygon
-  Tab             Cycle the active camera (Left / Right)
-  Q               Quit (same as normal)
-
-PLEASE LOOK AT THE WARNINGS!!!
-"""
-# yolo export model=yolo11n.pt format=engine half=True device=0 imgsz=128 batch=2
 import traceback
 import atexit
 import cv2
@@ -54,7 +70,14 @@ torch.backends.cudnn.enabled = True
 torch.set_num_threads(1)
 cv2.setNumThreads(1)
 
-
+## @brief Lock Jetson hardware clocks at maximum frequency for consistent inference latency.
+#
+#  Stores the current clock state to JETSON_CLOCKS_CONF before locking so it can
+#  be restored on shutdown. Should be called at startup (enable=True) and in the
+#  atexit handler (enable=False). Prints a coloured warning so the state change
+#  is visible in the terminal.
+#
+#  @param enable  True to lock clocks at maximum; False to restore original state.
 def set_jetson_clocks(enable: bool):
     try:
         if enable:
@@ -67,7 +90,14 @@ def set_jetson_clocks(enable: bool):
     except Exception as e:
         print(f"\033[1;91mWarning: [SYSTEM] JETSON CLOCKS FAILED: {e}\033[0m")
 
-
+## @brief Parse command-line arguments.
+#
+#  Supports three flags that can be combined freely:
+#  - -t / -T / --test    Open the display window for visual testing.
+#  - -r / -R / --record  Record raw (or annotated) frames to disk.
+#  - -a / -A / --annotate  Burn annotations into the recording (requires -r).
+#
+#  @return argparse.Namespace with attributes: test (bool), record (bool), annotate (bool).
 def parse_args():
     p = argparse.ArgumentParser(description="Parking Finder")
     p.add_argument("-t", "-T", "--test", action="store_true", help="Enable display")
@@ -75,41 +105,108 @@ def parse_args():
     p.add_argument("-A", "-a", "--annotate", action="store_true", help="Records the annotated version (requires -r)")
     return p.parse_args()
 
-
+## @var JETSON_CLOCKS_CONF
+# @brief Temporary file path used to store the original jetson clock state before locking.
 JETSON_CLOCKS_CONF = '/tmp/jetson_clocks_backup.conf'
-CAP_W, CAP_H = 640, 480
-DISP_W, DISP_H = 640, 480
+
+## @var CAP_W
+# @brief capture frame width in pixels.
+CAP_W = 640
+## @var CAP_H
+#  @brief Capture frame height in pixels.
+CAP_H = 480
+## @var DISP_W
+#  @brief Display frame width in pixels.
+DISP_W = 640
+## @var DISP_H
+#  @brief Display frame height in pixels.
+DISP_H = 480
+## @var CAP_SHAPE
+#  @brief NumPy shape tuple for a raw capture frame (H, W, 3).
 CAP_SHAPE = (CAP_H, CAP_W, 3)
+## @var DISP_SHAPE
+#  @brief NumPy shape tuple for a display frame (H, W, 3).
 DISP_SHAPE = (DISP_H, DISP_W, 3)
+## @var SOURCES
+#  @brief Video sources for each camera. Can be V4L2 device indices (int) or file paths (str).
+#  @note Indices are auto-detected at startup by reading v4l2-ctl output.
 # SOURCES = [0, 0] #Left, Right
 # SOURCES = ['./Left1.mp4', './Right1.mp4']
 SOURCES = ['./recordings/left_side_cam.mp4', './recordings/right_side_ccam.mp4']
+## @var CAPTURE_FPS
+#  @brief Target capture framerate for live cameras and recording output.
 CAPTURE_FPS = 30
+## @var INFERENCEFPS
+#  @brief Maximum inference framerate. Caps how often the YOLO model is called.
 INFERENCEFPS = 15
+## @var IMGSZ
+#  @brief Input image size (square) fed to the YOLO model in pixels.
 IMGSZ = 128
+## @var CONF
+#  @brief YOLO detection confidence threshold. Detections below this are discarded
 CONF = 0.25
+## @var MODEL_PATH
+#  @brief Path to the YOLO model file. Supports .pt (PyTorch) and .engine (TensorRT).
 MODEL_PATH = "./models/yolo11n.engine"
 # MODEL_PATH = "./yolo11n.pt"
 # MODEL_PATH = "./models/yolo26x.engine"
-
+## @var MAX_BATCH
+#  @brief Maximum batch size passed to the YOLO model per inference call.
+#  @note Padding frames are added when fewer cameras are active.
 MAX_BATCH = 3
+## @var CLASSES
+#  @brief COCO class IDs to detect. 2=car, 3=motorcycle, 5=bus, 7=truck.
 CLASSES = [2, 3, 5, 7]
+## @var CAM_ORDER
+#  @brief Ordered list of camera name strings. Index matches SOURCES and shared memory lists.
 CAM_ORDER = ['Left', 'Right']
+## @var DISPLAY_ORDER
+#  @brief Order in which camera panels are stitched horizontally in the display window
 DISPLAY_ORDER = [0, 1]
+## @var INF_IDX
+#  @brief Camera indices that are sent to the inference pipeline.
 INF_IDX = [0, 1]
+## @var SPOT_CAMS
+#  @brief Set of camera names that have parking spot ROIs defined and should be checked for occupancy.
 SPOT_CAMS = {'Left', 'Right'}
-MIN_BOX_H = {'Left': 30, 'Right': 30}  # Ignore detections smaller than this
+## @var MIN_BOX_H
+#  @brief Per camera minimum bounding box height in pixels. Boxes shorter than this are ignored
+#         to filter out distant vehicles.
+MIN_BOX_H = {'Left': 30, 'Right': 30}
+## @var INTERSECT_ALLOWANCE
+#  @brief Minimum fraction of a spot's mask area that a bounding box must overlap
+#         to mark the spot as occupied. (0.15 = 15%)
 INTERSECT_ALLOWANCE = 0.15
+## @var AUTO_CALIBRATE_INTERVAL
+#  @brief Seconds between automatic ROI recalibration passes. Set to 0 to disable.
 AUTO_CALIBRATE_INTERVAL = 0
+## @var ROIS
+#  @brief Per camera list of parking spot definitions.
+#  @note Populate these manually or let the calibration system generate them at runtime.
 ROIS = {
     'Left': [
     ],
     'Right': [
     ],
 }
-
+## @var SPOT_MASK
+#  @brief Per camera list of boolean NumPy arrays (DISP_H x DISP_W) pre-rasterised from ROIS.
+#         True pixels belong to that spot's polygon. Used for fast overlap checks.
 SPOT_MASK: dict[str, list[np.ndarray]] = {}
 
+## @var CALIB_PARAMS
+#  @brief Per camera calibration parameters used by generate_rois() and auto_caliberate_rois().
+#
+#  Keys per camera:
+#  - vanishing_point (tuple): (x, y) pixel of the perspective vanishing point.
+#  - near_y (int): Y pixel of the near (bottom) edge of the parking area.
+#  - far_y (int): Y pixel of the far (top) edge of the parking area.
+#  - left_x / right_x (int): Horizontal bounds of the parking area.
+#  - n_spots (int): Expected number of parking spots per row.
+#  - n_rows (int): Number of rows of spots.
+#  - fisheye_distortion (float): lens distortion correction coefficient.
+#  - perspective_strength (float): 0.0 = no perspective warp, 1.0 = full warp toward vanishing point.
+#  - min_roi_height (int): Minimum pixel height of a generated ROI polygon.
 CALIB_PARAMS = {
     'Left': {'vanishing_point': (381, 214), 'near_y': 406, 'far_y': 274,
              'left_x': 0, 'right_x': 640, 'n_spots': 6, 'n_rows': 1, 'fisheye_distortion': 0.0,
@@ -125,37 +222,95 @@ for cam, spots in ROIS.items():
         m = np.zeros((DISP_H, DISP_W), dtype=np.uint8)
         cv2.fillPoly(m, [np.array(spot['poly'], dtype=np.int32)], 1)
         SPOT_MASK[cam].append(m.astype(bool))
+## @var OCCUPIED_COLOR
+#  @brief BGR colour used to fill occupied spot overlays (red tint).
+OCCUPIED_COLOR = (0, 0, 220)
+## @var EMPTY_COLOR
+#  @brief BGR colour used to fill empty spot overlays (green tint).
+EMPTY_COLOR = (0, 220, 80)
+## @var SPOT_ALPHA
+#  @brief Opacity of the spot overlay blend. 0.0 = invisible, 1.0 = fully opaque.
+SPOT_ALPHA = 0.25
 
-OCCUPIED_COLOR = (0, 0, 220)  # Red tint
-EMPTY_COLOR = (0, 220, 80)  # Green tint
-SPOT_ALPHA = 0.25  # Opacity
-
+## @var store_lock
+#  @brief Threading lock protecting all shared state variables (spot_states, _last_boxes, etc.)
+#         from concurrent reads/writes by the inference and display threads.
 store_lock = threading.Lock()
 
+## @var spot_states
+#  @brief Per-camera list of occupancy strings for each spot. Values are 'Empty' or 'Car'.
+#         Written by check_parking_spots(), read by the Flask API and display loop.
 spot_states: dict[str, list[str]] = {
     cam: ['Empty'] * len(spots) for cam, spots in ROIS.items()
 }
 
+## @var RAW_SHM_OBJS
+#  @brief SharedMemory objects holding raw (unannotated) camera frames.
 RAW_SHM_OBJS: list[SharedMemory] = []
+## @var ANN_SHM_OBJS
+#  @brief SharedMemory objects holding annotated frames written by the inference thread.
 ANN_SHM_OBJS: list[SharedMemory] = []
+## @var RAW_BUFS
+#  @brief NumPy arrays mapped onto RAW_SHM_OBJS for zero copy frame access.
 RAW_BUFS: list[np.ndarray] = []
+## @var ANN_BUFS
+#  @brief NumPy arrays mapped onto ANN_SHM_OBJS for zero copy annotated frame access.
 ANN_BUFS: list[np.ndarray] = []
+## @var ANN_LOCKS
+#  @brief Per camera multiprocessing Locks protecting ANN_BUFS entries.
 ANN_LOCKS: list = []
+## @var RAW_LOCKS
+#  @brief Per-camera multiprocessing Locks protecting RAW_BUFS entries.
 RAW_LOCKS: list = []
+## @var RAW_FRAME_ID
+#  @brief Per camera shared Value('i') counters incremented each time a new frame is written.
+#         Used by the inference thread to detect stale frames without locking.
 RAW_FRAME_ID: list = []
+## @var PROCESSES
+#  @brief List of capture worker Process objects, kept for clean shutdown.
 PROCESSES: list = []
-
+## @var _MAIN_PID
+#  @brief PID of the main process. Used in the atexit handler to avoid running
+#         shutdown logic in child processes.
 _MAIN_PID = 0
+## @var STOP_EVENT
+#  @brief Multiprocessing Event shared with all worker processes and threads.
+#         Set to True to signal a clean shutdown across the entire system.
 STOP_EVENT = Event()
-
+## @var _last_boxes
+#  @brief Per camera cache of the most recent raw bounding boxes (display coordinates).
+#         Written by the inference thread, read by auto-calibration and the display loop.
 _last_boxes: dict[str, list] = {cam: [] for cam in CAM_ORDER}
+## @var _last_ann_boxes
+#  @brief Per camera cache of (box, score, name) tuples from the last inference pass.
+#         Used by the display loop to draw labels without re-running inference.
 _last_ann_boxes: dict[str, list] = {cam: [] for cam in CAM_ORDER}
+## @var _empty_streak
+#  @brief Per camera, per spot counter of consecutive inference frames with no detection.
+#         A spot transitions from 'Car' to 'Empty' only after EMPTY_CONFIRM_FRAMES consecutive
+#         empty frames, preventing flickering from momentary missed detections.
 _empty_streak: dict[str, list[int]] = {cam: [] for cam in CAM_ORDER}
+## @var _manual_bounds
+#  @brief Per camera list of manually set spot boundary X positions from the CalibWindow.
+#         Blended into auto-calibrated boundaries with a small weight to stabilise results.
 _manual_bounds: dict[str, list[float]] = {cam: [] for cam in CAM_ORDER}
+## @var _debug_frames
+#  @brief Per camera debug visualisation frames showing detected edges and boundary lines.
+#         Only populated when the CALIB_DEBUG environment variable is set.
 _debug_frames: dict[str, np.ndarray] = {}
+## @var EMPTY_CONFIRM_FRAMES
+#  @brief Number of consecutive inference frames a spot must appear empty before its
+#         state is changed from 'Car' to 'Empty'. Reduces false-empty flicker.
 EMPTY_CONFIRM_FRAMES = 3
 
-
+## @brief Create a NumPy array view backed by a SharedMemory block.
+#
+#  No data is copied — the array directly references the shared memory buffer.
+#  All processes sharing the same SharedMemory name will see the same bytes.
+#
+#  @param shm   An open SharedMemory object.
+#  @param shape Desired NumPy shape tuple, e.g. (480, 640, 3).
+#  @return      uint8 NumPy array backed by shm.buf.
 def shm_ndarray(shm: SharedMemory, shape: tuple) -> np.ndarray:
     return np.ndarray(shape, dtype=np.uint8, buffer=shm.buf)
 
@@ -163,7 +318,24 @@ def shm_ndarray(shm: SharedMemory, shape: tuple) -> np.ndarray:
 app = Flask(__name__)
 CORS(app)
 
-
+## @brief Flask REST endpoint — returns current parking spot occupancy states.
+#
+#  Called by the front end or any HTTP client to poll occupancy without needing
+#  direct access to the process. Acquires store_lock briefly to get a consistent
+#  snapshot of spot_states.
+#
+#  @par Example response
+#  @code{.json}
+#  {
+#    "timestamp": "14:32:01",
+#    "spots": {
+#      "Left":  ["Empty", "Car", "Empty", "Empty", "Car", "Empty"],
+#      "Right": ["Car", "Car", "Empty", "Empty", "Car"]
+#    }
+#  }
+#  @endcode
+#
+#  @return Flask JSON response with HTTP 200.
 @app.route('/detections', methods=['GET'])
 def get_detections():
     with store_lock:
@@ -173,7 +345,20 @@ def get_detections():
         }
     return jsonify(data)
 
-
+## @brief Determine occupancy state for each parking spot ROI on a given camera.
+#
+#  For every bounding box received from the inference thread, a boolean pixel mask
+#  is created and compared against each pre-rasterised spot mask using bitwise AND.
+#  A spot is marked 'Car' if the overlap pixel count exceeds INTERSECT_ALLOWANCE
+#  multiplied by the total spot mask area. Each car is assigned to the single spot
+#  it overlaps the most, preventing one large vehicle from claiming multiple spots.
+#
+#  To avoid flickering when a car is momentarily missed by the detector, a spot only
+#  transitions back to 'Empty' after EMPTY_CONFIRM_FRAMES consecutive frames with
+#  no detection, tracked via _empty_streak.
+#
+#  @param cam_name   Camera identifier string, e.g. "Left" or "Right".
+#  @param disp_boxes List of [x1, y1, x2, y2] bounding boxes in display pixel coordinates.
 def check_parking_spots(cam_name: str, disp_boxes: list):
     """
         Spot is occupied if bounding box overlaps 10% of its ROI
@@ -230,7 +415,18 @@ def check_parking_spots(cam_name: str, disp_boxes: list):
                     new_states[idx] = 'Empty'
         spot_states[cam_name] = new_states
 
-
+## @brief Draw YOLO detection boxes and confidence labels directly onto a frame (in-place).
+#
+#  Iterates over the paired box/score/name lists and draws a filled rectangle label
+#  above each bounding box. Boxes shorter than MIN_BOX_H are skipped to ignore
+#  noise from distant or partial detections. Modifies the frame array in-place to
+#  avoid an extra memory allocation.
+#
+#  @param frame      BGR uint8 NumPy array to annotate. Modified in-place.
+#  @param disp_boxes List of [x1, y1, x2, y2] bounding boxes in display coordinates.
+#  @param scores     Confidence score (float) for each box.
+#  @param names      COCO class name string for each box (e.g. "car", "truck").
+#  @param cam_name   Camera identifier used to look up the MIN_BOX_H threshold.
 def annotate_frame(frame: np.ndarray, disp_boxes: list, scores: list, names: list, cam_name: str):
     """
         Draw annotation directly on frames, no copy less memory overhead
@@ -250,7 +446,17 @@ def annotate_frame(frame: np.ndarray, disp_boxes: list, scores: list, names: lis
         cv2.rectangle(frame, (x1, y1 - th - 8), (x1 + tw + 6, y1), color, -1)
         cv2.putText(frame, label, (x1 + 3, y1 - 4), cv2.FONT_HERSHEY_COMPLEX, 0.5, (15, 15, 15), 1, cv2.LINE_AA)
 
-
+## @brief Blend semi transparent ROI polygon overlays onto a camera frame.
+#
+#  For each defined parking spot, a filled polygon is drawn onto a copy of the frame
+#  using the occupancy-dependent colour (OCCUPIED_COLOR or EMPTY_COLOR), then blended
+#  back onto the original using cv2.addWeighted with SPOT_ALPHA opacity. A spot ID
+#  and state label is drawn at the polygon centroid.
+#
+#  @param frame    BGR uint8 NumPy array to draw onto. Not modified in-place;
+#                  a blended copy is returned.
+#  @param cam_name Camera identifier used to look up ROIS and spot_states.
+#  @return         New BGR frame with spot overlays blended in.
 def draw_spot_overlays(frame: np.ndarray, cam_name: str) -> np.ndarray:
     """
         Blend ROI polygons into the frame
@@ -282,7 +488,41 @@ def draw_spot_overlays(frame: np.ndarray, cam_name: str) -> np.ndarray:
 
     return cv2.addWeighted(overlay, SPOT_ALPHA, frame, 1 - SPOT_ALPHA, 0)
 
-
+## @brief Procedurally generate perspective correct parking spot ROI polygons.
+#
+#  Computes ROI polygons that match real-world lane markings
+#  under camera perspective distortion. The algorithm works by interpolating
+#  horizontal boundary positions between a near Y row and a far Y row using a
+#  vanishing point to model convergence, then optionally applying a radial
+#  fisheye correction. Three internal helpers handle the geometry:
+#
+#  horizontal_bounds(y): Returns the left/right X extents at a given Y row,
+#  blending between a rectangular layout and full-perspective convergence
+#  toward the vanishing point using perspective_strength.
+#
+#  scale_x_to_y(x_at_near, y): Projects a single X position from the near row
+#  to any other Y row along the perspective gradient.
+#
+#  fisheye(x, y): Applies barrel/pincushion radial distortion correction.
+#  A positive fisheye_distortion value corrects barrel distortion (wide-angle
+#  lenses); negative corrects pincushion.
+#
+#  If spot_boundaries is provided as a list of (near_x, far_x) tuples, those
+#  explicit positions are used instead of uniform division.
+#
+#  @param cam_id               Camera identifier string, used as spot ID prefix.
+#  @param vanishing_point      (x, y) pixel coordinate of the perspective vanishing point.
+#  @param near_y               Y pixel of the near (bottom) edge of the parking area.
+#  @param far_y                Y pixel of the far (top) edge of the parking area.
+#  @param left_x               Left boundary X pixel of the parking area.
+#  @param right_x              Right boundary X pixel of the parking area.
+#  @param n_spots              Number of parking spots per row (default 5).
+#  @param n_rows               Number of rows of spots (default 1).
+#  @param fisheye_distortion   Radial distortion coefficient. 0.0 disables correction.
+#  @param perspective_strength Blend between rect (0.0) and full-perspective (1.0) layout.
+#  @param name                 Optional spot ID prefix override (defaults to cam_id[0]).
+#  @param spot_boundaries      Optional pre-computed boundary list. Length must be n_spots+1.
+#  @return List of dicts, each with keys 'id' (str) and 'poly' (list of (x,y) int tuples).
 def generate_rois(
         cam_id: str,
         vanishing_point: tuple,
@@ -382,7 +622,30 @@ def generate_rois(
             rois.append({'id': f'{prefix}{row * n_spots + s + 1}', 'poly': poly})
     return rois
 
-
+## @brief Automatically recalibrate ROI polygons for a camera using edge detection.
+#
+#  Analyses a snapshot frame using the following pipeline:
+#  1. Converts to greyscale and applies Canny edge detection.
+#  2. Uses Probabilistic Hough Transform to find line segments.
+#  3. Filters out horizontal lines near known car bounding box edges to avoid
+#     using car rooftops/hoods as calibration references.
+#  4. Clusters remaining horizontal lines to estimate the far_y boundary.
+#  5. Clamps far_y drift to ±50px of the original value to prevent wild jumps.
+#  6. Detects near-vertical lines and computes their pairwise intersections
+#     to estimate the vanishing point.
+#  7. Calls detect_spot_boundaries() to find individual spot divider positions,
+#     optionally blending in any manually set boundaries from _manual_bounds.
+#  8. Calls generate_rois() with the updated parameters to produce new polygons.
+#
+#  Updates CALIB_PARAMS in-place and syncs the CalibWindow trackbars if open.
+#  Returns None and prints a warning if insufficient lines are detected.
+#
+#  @param cam_name       Camera identifier string, e.g. "Left".
+#  @param frame          BGR display-resolution frame to analyse.
+#  @param current_params Current CALIB_PARAMS dict for this camera.
+#  @param detections     Optional list of [x1,y1,x2,y2] boxes to exclude car edges
+#                        from the line analysis.
+#  @return List of new ROI dicts (same format as generate_rois()), or None on failure.
 def auto_caliberate_rois(cam_name: str, frame: np.ndarray, current_params: dict, detections: list = None) -> list[dict]:
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -522,9 +785,17 @@ def auto_caliberate_rois(cam_name: str, frame: np.ndarray, current_params: dict,
                          right_x=right_x, n_spots=detected_n_spots, n_rows=n_rows, fisheye_distortion=distortion,
                          perspective_strength=strength, spot_boundaries=boundaries)
 
-
-# ── ROI Editor state ──────────────────────────────────────────────────────────
-
+## @brief Rebuild the in-memory ROI and mask tables for a camera after calibration.
+#
+#  Re-rasterises each new ROI polygon into a boolean pixel mask and atomically
+#  replaces the global ROIS, SPOT_MASK, and spot_states entries under store_lock.
+#  If the number of spots has changed, spot_states and _empty_streak are reset
+#  to avoid index mismatches.
+#
+#  @param cam_name     Camera identifier string.
+#  @param new_rois     New list of ROI dicts from generate_rois() or auto_caliberate_rois().
+#  @param reset_states If True, forces spot_states back to all 'Empty' regardless of
+#                      whether the spot count changed.
 def rebuild_spot_masks(cam_name: str, new_rois: list[dict], reset_states: bool = False):
     global ROIS, SPOT_MASK, spot_states
 
@@ -544,7 +815,20 @@ def rebuild_spot_masks(cam_name: str, new_rois: list[dict], reset_states: bool =
     # 	_empty_streak[cam_name] = [0] * len(new_rois)
     print(f"\033[1;91mWarning: [Auto Caliberation] {cam_name}: {len(new_rois)} spots rebuilt\033[0m")
 
-
+## @brief Interactive polygon editor for defining parking spot ROIs at runtime.
+#
+#  Lives entirely in the display thread — all methods are called from display_loop()
+#  and are not thread-safe. The editor is toggled on/off by pressing I in the
+#  display window. While active, the user left-clicks to place polygon vertices on
+#  the active camera panel, then presses Enter to print the completed polygon's
+#  coordinates to the terminal in a copy-pasteable format for hardcoding into ROIS.
+#
+#  Tab cycles between camera panels so both Left and Right ROIs can be defined
+#  without restarting. Points are stored in panel-local coordinates and converted
+#  to stitched-window coordinates only for rendering.
+#
+#  @note This editor does NOT automatically apply the polygon to ROIS/SPOT_MASK.
+#        Copy the printed output into the ROIS constant at the top of the file.
 class ROIEditor:
     """
     Interactive polygon editor. Lives entirely in the display thread.
@@ -757,7 +1041,27 @@ class ROIEditor:
 
 roi_editor = ROIEditor()
 
-
+## @brief Camera capture worker — runs as a separate Process per camera.
+#
+#  Opens the video source (V4L2 device or file), configures resolution and FPS,
+#  then loops reading frames and writing them into the shared memory buffer.
+#  After each write it increments raw_frame_id and sets frame_ready_event to
+#  immediately wake the inference thread without polling.
+#
+#  For live cameras, YUYV format and a buffer size of 1 are set to always
+#  deliver the most recent frame. For file sources, the video rewinds at EOF.
+#  The process ignores SIGINT so Ctrl+C is handled only by the main process
+#  via STOP_EVENT.
+#
+#  Pinned to CPU core (cam_id + 1) by the main process after spawning.
+#
+#  @param cam_id            Zero-based camera index.
+#  @param src               V4L2 device index (int) or video file path (str).
+#  @param raw_shm_name      Name of the shared memory block to write frames into.
+#  @param raw_lock          Multiprocessing Lock protecting the shared buffer.
+#  @param raw_frame_id      Shared Value('i') incremented on each new frame.
+#  @param frame_ready_event Multiprocessing Event set after each frame write.
+#  @param stop_event        Multiprocessing Event polled to trigger shutdown.
 def capture_worker(cam_id: int, src: int, raw_shm_name: str, raw_lock, raw_frame_id, frame_ready_event, stop_event):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     os.environ['OPENBLAS_NUM_THREADS'] = '2'
@@ -838,7 +1142,28 @@ def capture_worker(cam_id: int, src: int, raw_shm_name: str, raw_lock, raw_frame
     cap.release()
     shm.close()
 
-
+## @brief YOLO inference thread — batches frames from all cameras and runs detection.
+#
+#  Runs as a daemon Thread pinned to CPU core 4. On startup it performs 5 warm-up
+#  inference passes with dummy frames to prime the TensorRT engine and avoid a
+#  latency spike on the first real frame.
+#
+#  Each iteration checks whether new frames are available by comparing raw_frame_id
+#  against last_seen. If new frames exist they are resized to IMGSZ, padded to
+#  MAX_BATCH with blank frames, and passed to the YOLO model in a single batched
+#  call. Detections are scaled back to display resolution using sx/sy factors.
+#
+#  Results are processed per camera:
+#  - check_parking_spots() updates occupancy state.
+#  - _last_boxes and _last_ann_boxes are updated under store_lock.
+#  - If need_annotations is True, annotated frames are written to ANN_BUFS.
+#
+#  Sleeps briefly and waits on frame_ready_event between inference cycles to
+#  avoid busy-waiting while respecting the INFERENCEFPS cap.
+#
+#  @param need_annotations  If True, annotated frames are rendered and written to ANN_BUFS.
+#  @param frame_ready_event Event set by capture workers when a new frame is available.
+#  @param stop_event        Event polled to trigger shutdown.
 def inference_loop(need_annotations: bool, frame_ready_event, stop_event):
     try:
         os.sched_setaffinity(0, {4})
@@ -943,7 +1268,25 @@ def inference_loop(need_annotations: bool, frame_ready_event, stop_event):
 
         last_time = now
 
-
+## @brief Display loop — renders the live camera feed with overlays in a GUI window.
+#
+#  Runs in the main thread (or a dedicated thread) when -T / --test is passed.
+#  Pinned to CPU core 5. Creates a single OpenCV window and stitches all camera
+#  panels side by side each frame. For each panel it:
+#  - Copies the latest raw frame from shared memory.
+#  - Calls draw_spot_overlays() to blend ROI polygons.
+#  - Draws cached detection boxes and labels from _last_ann_boxes.
+#  - Overlays the camera name and occupancy count.
+#
+#  After stitching, roi_editor.draw_overlay() is called to paint the ROI editor
+#  UI if it is active. An optional CALIB_DEBUG window shows edge detection output.
+#
+#  Keyboard bindings (in addition to ROI editor keys):
+#  - U: Trigger a manual auto-calibration pass for all cameras.
+#  - C: Toggle the CalibWindow trackbar panel for the active camera.
+#  - Q: Set STOP_EVENT and exit.
+#
+#  @param stop_event Multiprocessing Event polled to exit the loop.
 def display_loop(stop_event):
     """
     Displays what the cams see.
@@ -1060,7 +1403,21 @@ def display_loop(stop_event):
     calib_window.close()
     cv2.destroyAllWindows()
 
-
+# @brief Blend detected spot boundaries with manually set ones from the CalibWindow.
+#
+#  Performs a weighted average between auto-detected and manually specified boundary
+#  X positions. The manual weight is kept intentionally small (default 0.15) so the
+#  auto-detection result dominates while the manual input provides a gentle stabilising
+#  nudge. The perspective angle offset (far_x - near_x) of the detected boundary is
+#  preserved through the blend.
+#
+#  Returns detected unchanged if manual is empty or the lists differ in length.
+#
+#  @param detected      List of detected boundary positions. Each entry is either
+#                       a float (uniform) or a (near_x, far_x) tuple.
+#  @param manual        List of manually specified boundary X positions (floats).
+#  @param manual_weight Blend weight for the manual values (0.0–1.0, default 0.15).
+#  @return              Blended boundary list as (near_x, far_x) tuples.
 def blend_boundaries(detected: list[float], manual: list[float], manual_weight: float = 0.15) -> list[float]:
     if not manual or len(detected) != len(manual):
         return detected
@@ -1075,7 +1432,20 @@ def blend_boundaries(detected: list[float], manual: list[float], manual_weight: 
         result.append((blended_near, blended_near + angle_offset))
     return result
 
-
+## @brief Live calibration window with OpenCV trackbars for tuning CALIB_PARAMS.
+#
+#  Opened and closed by pressing C in the display window. Each trackbar maps to one
+#  field in CALIB_PARAMS for the currently active camera. Float parameters
+#  (fisheye_distortion, perspective_strength) are stored as integers scaled by 100
+#  to work around OpenCV's integer-only trackbar API.
+#
+#  On every slider change, tick() reads all trackbar values, updates CALIB_PARAMS,
+#  calls detect_spot_boundaries() on the latest camera snapshot, and then calls
+#  generate_rois() to immediately rebuild and display the new ROIs — giving real-time
+#  visual feedback while tuning.
+#
+#  suppress_auto is set to True while the window is open to prevent the background
+#  auto-calibration thread from overwriting the manual adjustments.
 class CalibWindow:
     """
     Separate OpenCV window with trackbars for live CALIB_PARAMS tuning.
@@ -1208,7 +1578,20 @@ class CalibWindow:
 
 calib_window = CalibWindow()
 
-
+## @brief Recording loop — writes camera frames to timestamped MP4 files.
+#
+#  Runs as a daemon Thread when -r / --record is passed. Pinned to CPU core 5
+#  (shared with the display loop, which is absent in headless record mode).
+#  Creates one MP4 file per camera in the recordings/ directory, named with a
+#  timestamp prefix and the camera name.
+#
+#  When use_anns is True, annotated frames from ANN_BUFS are written instead
+#  of raw frames, burning in bounding boxes and ROI overlays permanently.
+#  Note that ANN_BUFS are only populated when need_annotations is True, which
+#  requires either -T or -r to be passed at startup.
+#
+#  @param stop_event  Multiprocessing Event polled to stop recording and flush files.
+#  @param use_anns    If True, record annotated frames; otherwise record raw frames. a 
 def record_loop(stop_event, use_anns=False):
     """
         Writes raw cam frames to the output file (Can be edited to write annotated frames)
@@ -1254,7 +1637,19 @@ def record_loop(stop_event, use_anns=False):
         w.release()
     print('[record] files saved')
 
-
+## @brief Background auto-calibration thread — periodically re-runs ROI calibration.
+#
+#  Runs as a daemon Thread pinned to CPU core 3. Sleeps for AUTO_CALIBRATE_INTERVAL
+#  seconds between passes (set to 0 to disable). On each pass it iterates over all
+#  SPOT_CAMS, skips cameras where the CalibWindow is open (to avoid fighting the
+#  user's manual adjustments), and calls auto_caliberate_rois() on the latest
+#  snapshot. If calibration succeeds, rebuild_spot_masks() is called to apply
+#  the new ROIs immediately.
+#
+#  Skips cameras with more than 3 simultaneous detections, as a heavily occupied
+#  lot provides poor lane-marking signal for edge detection.
+#
+#  @param stop_event Multiprocessing Event polled to exit the loop.
 def auto_calibrate_loop(stop_event):
     try:
         os.sched_setaffinity(0, {3})
@@ -1296,7 +1691,17 @@ def auto_calibrate_loop(stop_event):
             except Exception as e:
                 print(f'[Auto Calibrate] {cam_name} error: {e}')
 
-
+## @brief Remove spot boundaries that would produce slots narrower than min_width pixels.
+#
+#  Iterates through the boundary list and skips any position that would create a
+#  slot width below min_width relative to the previous kept boundary. This prevents
+#  the ROI generator from producing tiny sliver polygons when line detection finds
+#  spurious closely-spaced dividers. The last boundary is always forced to match
+#  the original final value to preserve the overall parking area extent.
+#
+#  @param boundaries List of X boundary positions (floats), including left and right edges.
+#  @param min_width  Minimum acceptable slot width in pixels (default 80.0).
+#  @return           Filtered boundary list with narrow gaps merged away.
 def merge_narrow_spots(boundaries: list[float], min_width: float = 80.0) -> list[float]:
     if len(boundaries) < 2:
         return boundaries
@@ -1313,7 +1718,33 @@ def merge_narrow_spots(boundaries: list[float], min_width: float = 80.0) -> list
 
     return merged
 
-
+## @brief Detect parking spot divider X positions from lane markings in a camera frame.
+#
+#  Pipeline:
+#  1. Thresholds the greyscale frame to isolate bright white lane markings.
+#  2. Applies morphological closing to fill small gaps in the markings.
+#  3. Runs Canny edge detection and masks to the parking area band.
+#  4. Uses Probabilistic Hough Transform to find line segments.
+#  5. Filters for near-vertical lines (45°–135°) and projects their X intercepts
+#     to near_y and far_y to produce (near_x, far_x) boundary pairs.
+#  6. Clusters nearby dividers (within 20px) and merges narrow gaps.
+#  7. If the detected count matches n_spots+1, returns those boundaries.
+#     If too many are found, picks the n_spots best-matching ones.
+#     If too few, falls back to _try_from_cars().
+#
+#  When CALIB_DEBUG is set, saves an annotated debug frame to _debug_frames.
+#
+#  @param frame      BGR display-resolution frame to analyse.
+#  @param near_y     Y pixel of the near edge of the parking area.
+#  @param far_y      Y pixel of the far edge of the parking area.
+#  @param left_x     Left boundary X pixel.
+#  @param right_x    Right boundary X pixel.
+#  @param n_spots    Expected number of parking spots.
+#  @param detections Optional list of [x1,y1,x2,y2] detection boxes for fallback.
+#  @param cam_name   Camera name used for debug frame storage.
+#  @return           Tuple of (boundaries, n_spots) where boundaries is a list of
+#                    (near_x, far_x) tuples or plain floats, and n_spots is the
+#                    detected spot count.
 def detect_spot_boundaries(frame: np.ndarray, near_y: int, far_y: int, left_x: int, right_x: int, n_spots: int,
                            detections: list = None, cam_name: str = None) -> tuple[list[float], int]:
     uniform = [left_x + (right_x - left_x) * i / n_spots for i in range(n_spots + 1)]
@@ -1408,7 +1839,21 @@ def detect_spot_boundaries(frame: np.ndarray, near_y: int, far_y: int, left_x: i
 
     return _try_from_cars(detections, near_y, left_x, right_x, n_spots, uniform)
 
-
+## @brief Fallback boundary estimator that infers spot dividers from car center positions.
+#
+#  Used when lane marking detection finds too few divider lines. Takes the horizontal
+#  centers of detected cars that are close to near_y and places divider boundaries
+#  at the midpoints between adjacent cars. Falls back to a uniform layout (after
+#  merge_narrow_spots cleaning) if fewer than 2 car centers are available or if the
+#  resulting boundary count does not match n_spots+1.
+#
+#  @param detections  List of [x1,y1,x2,y2] detection boxes, or None.
+#  @param near_y      Y pixel of the near edge used to filter relevant detections.
+#  @param left_x      Left boundary X pixel.
+#  @param right_x     Right boundary X pixel.
+#  @param n_spots     Expected number of parking spots.
+#  @param fallback    Uniform boundary list used when car-based estimation fails.
+#  @return            Tuple of (boundaries, n_spots).
 def _try_from_cars(detections, near_y, left_x, right_x, n_spots, fallback):
     if not detections:
         fallback = merge_narrow_spots(fallback)
@@ -1436,7 +1881,14 @@ def _try_from_cars(detections, near_y, left_x, right_x, n_spots, fallback):
     fallback = merge_narrow_spots(fallback)
     return [(x, x) for x in fallback], len(fallback) - 1
 
-
+## @brief atexit handler — gracefully shuts down all workers and frees shared memory.
+#
+#  Registered with atexit so it runs automatically on normal exit, KeyboardInterrupt,
+#  or unhandled exceptions. Only executes in the main process (guarded by _MAIN_PID)
+#  to prevent child capture processes from triggering a double-shutdown.
+#
+#  Sets STOP_EVENT, joins all capture processes with a 3-second timeout, unlinks
+#  all shared memory blocks, and restores Jetson clock settings.
 @atexit.register
 def shutdown():
     if os.getpid() != _MAIN_PID:

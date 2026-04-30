@@ -1,0 +1,101 @@
+\doxysection{regions.\+jsx}
+\hypertarget{regions_8jsx_source}{}\label{regions_8jsx_source}\index{src/Dashboard/src/frontend/regions.jsx@{src/Dashboard/src/frontend/regions.jsx}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00001}00001\ import\ \{\ MapContainer,\ TileLayer,\ Marker,\ Popup,\ Rectangle\ \}\ from\ "{}react-\/leaflet"{}}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00002}00002\ import\ 'leaflet/dist/leaflet.css'}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00003}00003\ import\ MarkerClusterGroup\ from\ "{}react-\/leaflet-\/cluster"{}}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00004}00004\ import\ \{\ useEffect,\ useState\ \}\ from\ "{}react"{}}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00005}00005\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00006}00006\ const\ START\_LONG\ =\ -\/97.11141225279618}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00007}00007\ const\ STEP\_LONG\ =\ 0.00002949}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00008}00008\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00009}00009\ const\ LONG\_0\ =\ -\/97.11215105459435}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00010}00010\ const\ LONG\_1\ =\ -\/97.11225975469435}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00011}00011\ const\ LONG\_2\ =\ -\/97.11280605469435}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00012}00012\ const\ LONG\_3\ =\ -\/97.11292905469435}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00013}00013\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00014}00014\ export\ function\ snapLongitudeBottom(long)\ \{}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00015}00015\ \ \ //\ In\ region\ 1\ (gap\ between\ Long2\ and\ Long3)\ -\/\ free\ placement}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00016}00016\ \ \ if\ (long\ <=\ LONG\_2\ \&\&\ long\ >=\ LONG\_3)\ \{}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00017}00017\ \ \ \ \ return\ long}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00018}00018\ \ \ \}}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00019}00019\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00020}00020\ \ \ //\ In\ region\ 2\ (gap\ between\ Long0\ and\ Long1)\ -\/\ free\ placement}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00021}00021\ \ \ if\ (long\ <=\ LONG\_0\ \&\&\ long\ >=\ LONG\_1)\ \{}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00022}00022\ \ \ \ \ return\ long}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00023}00023\ \ \ \}}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00024}00024\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00025}00025\ \ \ //\ After\ Long3\ (more\ negative\ than\ Long3)\ -\/\ start\ from\ Long3}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00026}00026\ \ \ if\ (long\ <\ LONG\_3)\ \{}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00027}00027\ \ \ \ \ const\ steps\ =\ Math.round((long\ -\/\ LONG\_3)\ /\ STEP\_LONG)}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00028}00028\ \ \ \ \ return\ LONG\_3\ +\ steps\ *\ STEP\_LONG}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00029}00029\ \ \ \}}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00030}00030\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00031}00031\ \ \ //\ Between\ Long1\ and\ Long2\ -\/\ start\ from\ Long1}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00032}00032\ \ \ if\ (long\ <\ LONG\_1\ \&\&\ long\ >\ LONG\_2)\ \{}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00033}00033\ \ \ \ \ const\ steps\ =\ Math.round((long\ -\/\ LONG\_1)\ /\ STEP\_LONG)}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00034}00034\ \ \ \ \ return\ LONG\_1\ +\ steps\ *\ STEP\_LONG}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00035}00035\ \ \ \}}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00036}00036\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00037}00037\ \ \ //\ Default\ -\/\ before\ Long0,\ start\ from\ START\_LONG}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00038}00038\ \ \ const\ steps\ =\ Math.round((long\ -\/\ START\_LONG)\ /\ STEP\_LONG)}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00039}00039\ \ \ return\ START\_LONG\ +\ steps\ *\ STEP\_LONG}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00040}00040\ \}}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00041}00041\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00042}00042\ const\ REGION\_LONGITUDES\ =\ [}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00043}00043\ \ \ -\/97.11408752,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00044}00044\ \ \ -\/97.11388841,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00045}00045\ \ \ -\/97.11368841,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00046}00046\ \ \ -\/97.11348541,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00047}00047\ \ \ -\/97.11328241,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00048}00048\ \ \ -\/97.11307901,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00049}00049\ \ \ -\/97.11287701,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00050}00050\ \ \ -\/97.11264701,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00051}00051\ \ \ -\/97.11242701,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00052}00052\ \ \ -\/97.11220501,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00053}00053\ \ \ -\/97.11200301,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00054}00054\ \ \ -\/97.11180001,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00055}00055\ \ \ -\/97.11159699}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00056}00056\ ]}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00057}00057\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00058}00058\ const\ REGION\_LATITUDES\ =\ [}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00059}00059\ \ \ 32.72536936,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00060}00060\ \ \ 32.72554031,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00061}00061\ \ \ 32.72571126,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00062}00062\ \ \ 32.72588221,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00063}00063\ \ \ 32.72605316,}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00064}00064\ \ \ 32.72622411}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00065}00065\ ]}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00066}00066\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00067}00067\ export\ function\ snapLongitude(long)\ \{}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00068}00068\ \ \ let\ closest\ =\ REGION\_LONGITUDES[0]}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00069}00069\ \ \ let\ minDiff\ =\ Math.abs(long\ -\/\ closest)}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00070}00070\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00071}00071\ \ \ for\ (let\ i\ =\ 1;\ i\ <\ REGION\_LONGITUDES.length;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00072}00072\ \ \ \ \ const\ diff\ =\ Math.abs(long\ -\/\ REGION\_LONGITUDES[i])}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00073}00073\ \ \ \ \ if\ (diff\ <\ minDiff)\ \{}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00074}00074\ \ \ \ \ \ \ minDiff\ =\ diff}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00075}00075\ \ \ \ \ \ \ closest\ =\ REGION\_LONGITUDES[i]}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00076}00076\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00077}00077\ \ \ \}}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00078}00078\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00079}00079\ \ \ return\ closest}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00080}00080\ \}}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00081}00081\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00082}00082\ export\ function\ snapLatitude(lat)\ \{}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00083}00083\ \ \ let\ closest\ =\ REGION\_LATITUDES[0]}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00084}00084\ \ \ let\ minDiff\ =\ Math.abs(lat\ -\/\ closest)}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00085}00085\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00086}00086\ \ \ for\ (let\ i\ =\ 1;\ i\ <\ REGION\_LATITUDES.length;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00087}00087\ \ \ \ \ const\ diff\ =\ Math.abs(lat\ -\/\ REGION\_LATITUDES[i])}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00088}00088\ \ \ \ \ if\ (diff\ <\ minDiff)\ \{}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00089}00089\ \ \ \ \ \ \ minDiff\ =\ diff}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00090}00090\ \ \ \ \ \ \ closest\ =\ REGION\_LATITUDES[i]}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00091}00091\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00092}00092\ \ \ \}}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00093}00093\ }
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00094}00094\ \ \ return\ closest}
+\DoxyCodeLine{\Hypertarget{regions_8jsx_source_l00095}00095\ \}}
+
+\end{DoxyCode}

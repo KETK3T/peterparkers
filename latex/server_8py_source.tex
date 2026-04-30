@@ -1,0 +1,40 @@
+\doxysection{server.\+py}
+\hypertarget{server_8py_source}{}\label{server_8py_source}\index{src/Dashboard/src/backend/server.py@{src/Dashboard/src/backend/server.py}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00001}00001\ \textcolor{keyword}{import}\ asyncio}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00002}00002\ \textcolor{keyword}{import}\ websockets}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00003}00003\ \textcolor{keyword}{import}\ csv}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00004}00004\ \textcolor{keyword}{import}\ json}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00005}00005\ }
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00006}00006\ PORT\ =\ 8765}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00007}00007\ CSV\_FILE\ =\ \textcolor{stringliteral}{"{}./src/Dashboard/src/backend/coordinates.csv"{}}}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00008}00008\ }
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00009}00009\ \textcolor{keyword}{async\ def\ }send\_coordinates(websocket):}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00010}00010\ \ \ \ \ print(\textcolor{stringliteral}{"{}Client\ connected"{}})}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00011}00011\ }
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00012}00012\ \ \ \ \ \textcolor{keywordflow}{while}\ \textcolor{keyword}{True}:}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00013}00013\ \ \ \ \ \ \ \ \ \textcolor{keyword}{with}\ open(CSV\_FILE,\ newline=\textcolor{stringliteral}{''})\ \textcolor{keyword}{as}\ csvfile:}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00014}00014\ \ \ \ \ \ \ \ \ \ \ \ \ reader\ =\ csv.DictReader(csvfile)}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00015}00015\ }
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00016}00016\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ row\ \textcolor{keywordflow}{in}\ reader:}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00017}00017\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ data\ =\ \{}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00018}00018\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}lat"{}}:\ float(row[\textcolor{stringliteral}{"{}lat"{}}]),}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00019}00019\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}long"{}}:\ float(row[\textcolor{stringliteral}{"{}long"{}}])}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00020}00020\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00021}00021\ }
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00022}00022\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ await\ websocket.send(json.dumps(data))}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00023}00023\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ print(\textcolor{stringliteral}{"{}Sent:"{}},\ data)}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00024}00024\ }
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00025}00025\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ await\ asyncio.sleep(0.6)\ \ \textcolor{comment}{\#\ 0.5\ second\ timer}}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00026}00026\ }
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00027}00027\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Loop\ back\ to\ beginning\ of\ file}}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00028}00028\ }
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00029}00029\ \textcolor{keyword}{async\ def\ }main():}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00030}00030\ \ \ \ \ \textcolor{keyword}{async}\ \textcolor{keyword}{with}\ websockets.serve(send\_coordinates,\ \textcolor{stringliteral}{"{}localhost"{}},\ PORT):}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00031}00031\ \ \ \ \ \ \ \ \ print(f\textcolor{stringliteral}{"{}WebSocket\ server\ running\ on\ ws://localhost:\{PORT\}"{}})}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00032}00032\ \ \ \ \ \ \ \ \ await\ asyncio.Future()\ \ \textcolor{comment}{\#\ run\ forever}}
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00033}00033\ }
+\DoxyCodeLine{\Hypertarget{server_8py_source_l00034}00034\ asyncio.run(main())}
+
+\end{DoxyCode}

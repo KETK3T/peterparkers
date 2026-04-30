@@ -1,6 +1,8 @@
-# SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
-# SPDX-License-Identifier: MIT
-# original filename: icm20x_icm20948_simpletest.py
+##  @file imu-sensor-data.py
+#   @brief Reads and prints acceleration, gyro and magnetometer data from an ICM20948 IMU over 12C.
+#   @note Original filename: icm20x_icm20948_simpletest.py
+#   @copyright 2021 ladyada for Adafruit Industries
+#   @license MIT
 import time
 
 import board

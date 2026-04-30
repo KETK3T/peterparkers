@@ -1,0 +1,61 @@
+\doxysection{localization.\+py}
+\hypertarget{localization_8py_source}{}\label{localization_8py_source}\index{src/imu-\/gps/localization.py@{src/imu-\/gps/localization.py}}
+\doxymbox{\hyperlink{localization_8py}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00004}00004\ \textcolor{keyword}{import}\ numpy\ \textcolor{keyword}{as}\ np}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00005}00005\ \textcolor{keyword}{from}\ imu\ \textcolor{keyword}{import}\ IMU}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00006}00006\ \textcolor{keyword}{from}\ gps\ \textcolor{keyword}{import}\ GPS}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00007}00007\ \textcolor{keyword}{from}\ test\_ekf\ \textcolor{keyword}{import}\ EKF}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00008}00008\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00009}00009\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00010}00010\ \textcolor{keyword}{def\ }blend\_angle(ekf,\ old\_angle,\ new\_angle,\ alpha):}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00011}00011\ \ \ \ \ diff\ =\ ekf.normalize\_angle(new\_angle\ -\/\ old\_angle)}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00012}00012\ \ \ \ \ \textcolor{keywordflow}{return}\ ekf.normalize\_angle(old\_angle\ +\ alpha\ *\ diff)}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00013}00013\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00014}00014\ \textcolor{comment}{\#\ This\ function\ converts\ latitude\ and\ longitude\ to\ local\ Cartesian\ coordinates\ (x,\ y)\ in\ meters\ relative\ to\ an\ origin\ point\ (lat0,\ lon0).}}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00015}00015\ \textcolor{keyword}{def\ }latlon\_toxy(lat,\ lon,\ lat0,\ lon0):\ \ \textcolor{comment}{\#\ lat0\ and\ lon0\ are\ the\ initial\ starting\ GPS\ coordinates}}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00016}00016\ \ \ \ \ R\ =\ 6378137\ \ \textcolor{comment}{\#\ Earth\ radius\ in\ meters}}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00017}00017\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00018}00018\ \ \ \ \ lat\ =\ np.radians(lat)}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00019}00019\ \ \ \ \ lon\ =\ np.radians(lon)}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00020}00020\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00021}00021\ \ \ \ \ lat0\ =\ np.radians(lat0)}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00022}00022\ \ \ \ \ lon0\ =\ np.radians(lon0)}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00023}00023\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00024}00024\ \ \ \ \ x\ =\ (lon\ -\/\ lon0)\ *\ R\ *\ np.cos(lat0)}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00025}00025\ \ \ \ \ y\ =\ (lat\ -\/\ lat0)\ *\ R}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00026}00026\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00027}00027\ \ \ \ \ \textcolor{keywordflow}{return}\ x,\ y}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00028}00028\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00029}00029\ \textcolor{comment}{\#\ This\ function\ calculates\ the\ yaw\ (heading)\ of\ the\ car.\ It\ uses\ pitch\ and\ roll\ to\ compensate\ for\ possible\ tilted\ angle\ of\ the\ IMU.}}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00030}00030\ \textcolor{keyword}{def\ }tilt\_compensated\_yaw(accel,\ mag):}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00031}00031\ \ \ \ \ ax,\ ay,\ az\ =\ accel}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00032}00032\ \ \ \ \ mx,\ my,\ mz\ =\ mag}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00033}00033\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00034}00034\ \ \ \ \ \textcolor{comment}{\#\ Normalize\ accelerometer}}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00035}00035\ \ \ \ \ norm\_a\ =\ np.sqrt(ax**2\ +\ ay**2\ +\ az**2)}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00036}00036\ \ \ \ \ norm\_m\ =\ np.sqrt(mx**2\ +\ my**2\ +\ mz**2)}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00037}00037\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00038}00038\ \ \ \ \ \textcolor{keywordflow}{if}\ norm\_a\ <\ 1e-\/6\ \textcolor{keywordflow}{or}\ norm\_m\ <\ 1e-\/6:}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00039}00039\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keywordtype}{None}}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00040}00040\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00041}00041\ \ \ \ \ ax\ /=\ norm\_a}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00042}00042\ \ \ \ \ ay\ /=\ norm\_a}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00043}00043\ \ \ \ \ az\ /=\ norm\_a}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00044}00044\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00045}00045\ \ \ \ \ \textcolor{comment}{\#\ Pitch\ and\ roll}}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00046}00046\ \ \ \ \ pitch\ =\ np.arcsin(-\/ax)\ \ \textcolor{comment}{\#\ rotation\ around\ y-\/axis}}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00047}00047\ \ \ \ \ roll\ =\ np.arctan2(ay,\ az)\ \textcolor{comment}{\#\ rotation\ around\ x-\/axis}}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00048}00048\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00049}00049\ \ \ \ \ \textcolor{comment}{\#\ Tilt\ compensation\ for\ magnetometer}}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00050}00050\ \ \ \ \ mx\_comp\ =\ mx\ *\ np.cos(pitch)\ +\ mz\ *\ np.sin(pitch)}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00051}00051\ \ \ \ \ my\_comp\ =\ mx\ *\ np.sin(roll)\ *\ np.sin(pitch)\ +\ my\ *\ np.cos(roll)\ -\/\ mz\ *\ np.sin(roll)\ *\ np.cos(pitch)}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00052}00052\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00053}00053\ \ \ \ \ \textcolor{comment}{\#\ Yaw\ calculation}}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00054}00054\ \ \ \ \ yaw\ =\ np.arctan2(-\/my\_comp,\ mx\_comp)\ \ \textcolor{comment}{\#\ rotation\ around\ z-\/axis,\ negative\ sign\ depends\ on\ sensor\ frame}}
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00055}00055\ }
+\DoxyCodeLine{\Hypertarget{localization_8py_source_l00056}00056\ \ \ \ \ \textcolor{keywordflow}{return}\ yaw}
+
+\end{DoxyCode}

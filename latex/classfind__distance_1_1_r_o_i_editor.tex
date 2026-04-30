@@ -1,0 +1,543 @@
+\doxysection{find\+\_\+distance.\+ROIEditor Class Reference}
+\hypertarget{classfind__distance_1_1_r_o_i_editor}{}\label{classfind__distance_1_1_r_o_i_editor}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+
+
+Interactive polygon editor for defining parking spot ROIs at runtime.  
+
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_aa55f2a435acfe5f8684420a618ea0823}{\+\_\+\+\_\+init\+\_\+\+\_\+}} (self)
+\item 
+str \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_a029a92f8b6868a0716a5a5b0c56af069}{active\+\_\+cam}} (self)
+\item 
+\doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_a90ec241840ef8dc53793ccfb0e4f68ac}{mouse\+\_\+cb}} (self, event, x, y, flags, param)
+\item 
+bool \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_a1b2e0a5865f54e8effc11d150e984f74}{handle\+\_\+key}} (self, int key)
+\item 
+\doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_ab57798359e904e9fa2e2d44cdac6ca85}{draw\+\_\+overlay}} (self, np.\+ndarray canvas)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+bool \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_aa209334c6638a439afadb103ad0cf8e2}{editor\+\_\+mode}} = False
+\item 
+list \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_ad68105e72692f125d5c700e09f9da282}{points}} = \+[$\,$]\+
+\item 
+tuple \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_a11ff0b09ad78f9410be8203f44863dc8}{mouse\+\_\+pos}} = (0, 0)
+\item 
+int \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_aa273b22524031681f0253615545304bd}{cam\+\_\+panel\+\_\+idx}} = 0
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Static Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+tuple \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_a876330f42fe83cbc19d1ac65effe7b58}{POINT\+\_\+\+COLOR}} = (0, 255, 255)
+\item 
+tuple \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_a8c18e4256bd445394d94d89a311fffef}{LINE\+\_\+\+COLOR}} = (0, 200, 255)
+\item 
+tuple \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_a85043595b820785d517b6dc253a0db30}{CLOSE\+\_\+\+COLOR}} = (180, 0, 255)
+\item 
+tuple \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_a7aba6a7e9c665db798cc69f3c483b343}{FILL\+\_\+\+COLOR}} = (0, 180, 255)
+\item 
+tuple \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_a10a8961b0f81a148332cae4730e11355}{CURSOR\+\_\+\+COLOR}} = (200, 200, 200)
+\item 
+tuple \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_a00521e39ce99ff24c24999833b74980d}{TEXT\+\_\+\+COLOR}} = (255, 255, 255)
+\item 
+tuple \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_a354a4587a0554d60877f7c8b4bdb9ace}{SHADOW\+\_\+\+COLOR}} = (0, 0, 0)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+str \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_a96db88a6c7a25e46b3472a4a38dd5c03}{\+\_\+next\+\_\+id}} (self, str cam)
+\item 
+\doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_a666d3588d4b2d92bc0c5edd72b199642}{\+\_\+finish\+\_\+polygon}} (self)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+dict \doxymbox{\hyperlink{classfind__distance_1_1_r_o_i_editor_ac1a1ceb66feb1b91eb6a99c9cd403c42}{\+\_\+spot\+\_\+counters}} = \{c:\+ len(ROIS.\+get(c, \+[$\,$]\+)) for c in \doxymbox{\hyperlink{find__distance_8py_a311236bc8f94663f7112c55cdb5b1f51}{CAM\+\_\+\+ORDER}}\}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Interactive polygon editor for defining parking spot ROIs at runtime. 
+
+Lives entirely in the display thread — all methods are called from \doxylink{find__distance_8py_af130ae23a7c9612b2638498a293c78d3}{display\+\_\+loop()} and are not thread-\/safe. The editor is toggled on/\+off by pressing I in the display window. While active, the user left-\/clicks to place polygon vertices on the active camera panel, then presses Enter to print the completed polygon\textquotesingle{}s coordinates to the terminal in a copy-\/pasteable format for hardcoding into ROIS.
+
+Tab cycles between camera panels so both Left and Right ROIs can be defined without restarting. Points are stored in panel-\/local coordinates and converted to stitched-\/window coordinates only for rendering.
+
+\begin{DoxyNote}{Note}
+This editor does NOT automatically apply the polygon to ROIS/\+\+SPOT\+\_\+\+MASK. Copy the printed output into the ROIS constant at the top of the file.
+\end{DoxyNote}
+\begin{DoxyVerb}Interactive polygon editor. Lives entirely in the display thread.
+
+Controls (active when editor_mode=True):
+    Left click   - add point
+    Right click  - undo last point
+    Enter        - finish polygon, print to terminal
+    Backspace    - clear current polygon
+    Tab          - cycle active camera
+    I            - toggle editor on/off
+\end{DoxyVerb}
+ 
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00832}{832}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+
+\label{doc-constructors}
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_aa55f2a435acfe5f8684420a618ea0823}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!\_\_init\_\_@{\_\_init\_\_}}
+\index{\_\_init\_\_@{\_\_init\_\_}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{\_\_init\_\_()}{\_\_init\_\_()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_aa55f2a435acfe5f8684420a618ea0823} 
+find\+\_\+distance.\+ROIEditor.\+\_\+\+\_\+init\+\_\+\+\_\+ (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00853}{853}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00853\ \ \ \ \ \textcolor{keyword}{def\ }\_\_init\_\_(self):}
+\DoxyCodeLine{00854\ \ \ \ \ \ \ \ \ self.editor\_mode:\ bool\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{00855\ \ \ \ \ \ \ \ \ self.points:\ list[tuple[int,\ int]]\ =\ []}
+\DoxyCodeLine{00856\ \ \ \ \ \ \ \ \ self.mouse\_pos:\ tuple[int,\ int]\ =\ (0,\ 0)}
+\DoxyCodeLine{00857\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Which\ camera\ panel\ the\ user\ is\ editing\ (index\ into\ DISPLAY\_ORDER)}}
+\DoxyCodeLine{00858\ \ \ \ \ \ \ \ \ self.cam\_panel\_idx:\ int\ =\ 0}
+\DoxyCodeLine{00859\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Running\ count\ per\ camera\ so\ auto-\/IDs\ don't\ repeat\ within\ a\ session}}
+\DoxyCodeLine{00860\ \ \ \ \ \ \ \ \ self.\_spot\_counters:\ dict[str,\ int]\ =\ \{c:\ len(ROIS.get(c,\ []))\ \textcolor{keywordflow}{for}\ c\ \textcolor{keywordflow}{in}\ CAM\_ORDER\}}
+\DoxyCodeLine{00861\ }
+
+\end{DoxyCode}
+
+
+\label{doc-func-members}
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_a666d3588d4b2d92bc0c5edd72b199642}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!\_finish\_polygon@{\_finish\_polygon}}
+\index{\_finish\_polygon@{\_finish\_polygon}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{\_finish\_polygon()}{\_finish\_polygon()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_a666d3588d4b2d92bc0c5edd72b199642} 
+find\+\_\+distance.\+ROIEditor.\+\_\+finish\+\_\+polygon (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [protected]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00943}{943}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00943\ \ \ \ \ \textcolor{keyword}{def\ }\_finish\_polygon(self):}
+\DoxyCodeLine{00944\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ len(self.points)\ <\ 3:}
+\DoxyCodeLine{00945\ \ \ \ \ \ \ \ \ \ \ \ \ print(f\textcolor{stringliteral}{"{}[ROI\ Editor]\ Need\ at\ least\ 3\ points\ (have\ \{len(self.points)\})"{}})}
+\DoxyCodeLine{00946\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}}
+\DoxyCodeLine{00947\ }
+\DoxyCodeLine{00948\ \ \ \ \ \ \ \ \ cam\ =\ self.active\_cam}
+\DoxyCodeLine{00949\ \ \ \ \ \ \ \ \ sid\ =\ self.\_next\_id(cam)}
+\DoxyCodeLine{00950\ \ \ \ \ \ \ \ \ poly\ =\ list(self.points)}
+\DoxyCodeLine{00951\ }
+\DoxyCodeLine{00952\ \ \ \ \ \ \ \ \ print(f\textcolor{stringliteral}{"{}\(\backslash\)n\#\ ──\ ROI\ output\ ──────────────────────────────────────────"{}})}
+\DoxyCodeLine{00953\ \ \ \ \ \ \ \ \ print(f\textcolor{stringliteral}{"{}\#\ Camera\ :\ \{cam\}\ \ \ ID\ :\ \{sid\}"{}})}
+\DoxyCodeLine{00954\ \ \ \ \ \ \ \ \ print(f\textcolor{stringliteral}{"{}\{\{'id':\ '\{sid\}',\ 'poly':\ \{poly\}\}\},"{}})}
+\DoxyCodeLine{00955\ \ \ \ \ \ \ \ \ print(f\textcolor{stringliteral}{"{}\#\ ─────────────────────────────────────────────────────────\(\backslash\)n"{}})}
+\DoxyCodeLine{00956\ }
+\DoxyCodeLine{00957\ \ \ \ \ \ \ \ \ self.points.clear()}
+\DoxyCodeLine{00958\ }
+
+\end{DoxyCode}
+Here is the caller graph for this function:\+
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classfind__distance_1_1_r_o_i_editor_a666d3588d4b2d92bc0c5edd72b199642_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_a96db88a6c7a25e46b3472a4a38dd5c03}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!\_next\_id@{\_next\_id}}
+\index{\_next\_id@{\_next\_id}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{\_next\_id()}{\_next\_id()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_a96db88a6c7a25e46b3472a4a38dd5c03} 
+ str find\+\_\+distance.\+ROIEditor.\+\_\+next\+\_\+id (\begin{DoxyParamCaption}\item[{}]{self}{, }\item[{str}]{cam}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [protected]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00868}{868}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00868\ \ \ \ \ \textcolor{keyword}{def\ }\_next\_id(self,\ cam:\ str)\ -\/>\ str:}
+\DoxyCodeLine{00869\ \ \ \ \ \ \ \ \ self.\_spot\_counters[cam]\ +=\ 1}
+\DoxyCodeLine{00870\ \ \ \ \ \ \ \ \ prefix\ =\ cam[0].upper()}
+\DoxyCodeLine{00871\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ f\textcolor{stringliteral}{"{}\{prefix\}\{self.\_spot\_counters[cam]\}"{}}}
+\DoxyCodeLine{00872\ }
+
+\end{DoxyCode}
+Here is the caller graph for this function:\+
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classfind__distance_1_1_r_o_i_editor_a96db88a6c7a25e46b3472a4a38dd5c03_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_a029a92f8b6868a0716a5a5b0c56af069}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!active\_cam@{active\_cam}}
+\index{active\_cam@{active\_cam}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{active\_cam()}{active\_cam()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_a029a92f8b6868a0716a5a5b0c56af069} 
+ str find\+\_\+distance.\+ROIEditor.\+active\+\_\+cam (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00865}{865}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00865\ \ \ \ \ \textcolor{keyword}{def\ }active\_cam(self)\ -\/>\ str:}
+\DoxyCodeLine{00866\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ CAM\_ORDER[DISPLAY\_ORDER[self.cam\_panel\_idx]]}
+\DoxyCodeLine{00867\ }
+
+\end{DoxyCode}
+Here is the caller graph for this function:\+
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classfind__distance_1_1_r_o_i_editor_a029a92f8b6868a0716a5a5b0c56af069_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_ab57798359e904e9fa2e2d44cdac6ca85}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!draw\_overlay@{draw\_overlay}}
+\index{draw\_overlay@{draw\_overlay}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{draw\_overlay()}{draw\_overlay()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_ab57798359e904e9fa2e2d44cdac6ca85} 
+find\+\_\+distance.\+ROIEditor.\+draw\+\_\+overlay (\begin{DoxyParamCaption}\item[{}]{self}{, }\item[{np.\+ndarray}]{canvas}{}\end{DoxyParamCaption})}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00959}{959}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00959\ \ \ \ \ \textcolor{keyword}{def\ }draw\_overlay(self,\ canvas:\ np.ndarray):}
+\DoxyCodeLine{00960\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keywordflow}{not}\ self.editor\_mode:}
+\DoxyCodeLine{00961\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}}
+\DoxyCodeLine{00962\ }
+\DoxyCodeLine{00963\ \ \ \ \ \ \ \ \ num\_panels\ =\ len(DISPLAY\_ORDER)}
+\DoxyCodeLine{00964\ \ \ \ \ \ \ \ \ panel\_w\ =\ DISP\_W}
+\DoxyCodeLine{00965\ \ \ \ \ \ \ \ \ col\_start\ =\ self.cam\_panel\_idx\ *\ panel\_w}
+\DoxyCodeLine{00966\ }
+\DoxyCodeLine{00967\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ ──\ translucent\ panel\ highlight\ ───────────────────────────────────────}}
+\DoxyCodeLine{00968\ \ \ \ \ \ \ \ \ overlay\ =\ canvas.copy()}
+\DoxyCodeLine{00969\ \ \ \ \ \ \ \ \ cv2.rectangle(overlay,\ (col\_start,\ 0),\ (col\_start\ +\ panel\_w,\ DISP\_H),}
+\DoxyCodeLine{00970\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (0,\ 60,\ 100),\ -\/1)}
+\DoxyCodeLine{00971\ \ \ \ \ \ \ \ \ cv2.addWeighted(overlay,\ 0.15,\ canvas,\ 0.85,\ 0,\ canvas)}
+\DoxyCodeLine{00972\ }
+\DoxyCodeLine{00973\ \ \ \ \ \ \ \ \ mx,\ my\ =\ self.mouse\_pos}
+\DoxyCodeLine{00974\ \ \ \ \ \ \ \ \ cv2.line(canvas,\ (mx,\ 0),\ (mx,\ DISP\_H),\ self.CURSOR\_COLOR,\ 1,\ cv2.LINE\_AA)}
+\DoxyCodeLine{00975\ \ \ \ \ \ \ \ \ cv2.line(canvas,\ (0,\ my),\ (canvas.shape[1],\ my),\ self.CURSOR\_COLOR,\ 1,\ cv2.LINE\_AA)}
+\DoxyCodeLine{00976\ }
+\DoxyCodeLine{00977\ \ \ \ \ \ \ \ \ canvas\_pts\ =\ [(col\_start\ +\ px,\ py)\ \textcolor{keywordflow}{for}\ (px,\ py)\ \textcolor{keywordflow}{in}\ self.points]}
+\DoxyCodeLine{00978\ }
+\DoxyCodeLine{00979\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ len(canvas\_pts)\ >=\ 3:}
+\DoxyCodeLine{00980\ \ \ \ \ \ \ \ \ \ \ \ \ fill\_overlay\ =\ canvas.copy()}
+\DoxyCodeLine{00981\ \ \ \ \ \ \ \ \ \ \ \ \ cv2.fillPoly(fill\_overlay,}
+\DoxyCodeLine{00982\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ [np.array(canvas\_pts,\ dtype=np.int32)],}
+\DoxyCodeLine{00983\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ self.FILL\_COLOR)}
+\DoxyCodeLine{00984\ \ \ \ \ \ \ \ \ \ \ \ \ cv2.addWeighted(fill\_overlay,\ 0.25,\ canvas,\ 0.75,\ 0,\ canvas)}
+\DoxyCodeLine{00985\ }
+\DoxyCodeLine{00986\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ i\ \textcolor{keywordflow}{in}\ range(1,\ len(canvas\_pts)):}
+\DoxyCodeLine{00987\ \ \ \ \ \ \ \ \ \ \ \ \ cv2.line(canvas,\ canvas\_pts[i\ -\/\ 1],\ canvas\_pts[i],}
+\DoxyCodeLine{00988\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ self.LINE\_COLOR,\ 2,\ cv2.LINE\_AA)}
+\DoxyCodeLine{00989\ }
+\DoxyCodeLine{00990\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ len(canvas\_pts)\ >=\ 3:}
+\DoxyCodeLine{00991\ \ \ \ \ \ \ \ \ \ \ \ \ p0,\ pn\ =\ canvas\_pts[0],\ canvas\_pts[-\/1]}
+\DoxyCodeLine{00992\ }
+\DoxyCodeLine{00993\ \ \ \ \ \ \ \ \ \ \ \ \ dx\ =\ p0[0]\ -\/\ pn[0];}
+\DoxyCodeLine{00994\ \ \ \ \ \ \ \ \ \ \ \ \ dy\ =\ p0[1]\ -\/\ pn[1]}
+\DoxyCodeLine{00995\ \ \ \ \ \ \ \ \ \ \ \ \ dist\ =\ max(1,\ int((dx\ **\ 2\ +\ dy\ **\ 2)\ **\ 0.5))}
+\DoxyCodeLine{00996\ \ \ \ \ \ \ \ \ \ \ \ \ segs\ =\ max(4,\ dist\ //\ 10)}
+\DoxyCodeLine{00997\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ s\ \textcolor{keywordflow}{in}\ range(segs):}
+\DoxyCodeLine{00998\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ s\ \%\ 2\ ==\ 0:}
+\DoxyCodeLine{00999\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ t0\ =\ s\ /\ segs}
+\DoxyCodeLine{01000\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ t1\ =\ (s\ +\ 1)\ /\ segs}
+\DoxyCodeLine{01001\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pt0\ =\ (int(pn[0]\ +\ dx\ *\ t0),\ int(pn[1]\ +\ dy\ *\ t0))}
+\DoxyCodeLine{01002\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pt1\ =\ (int(pn[0]\ +\ dx\ *\ t1),\ int(pn[1]\ +\ dy\ *\ t1))}
+\DoxyCodeLine{01003\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cv2.line(canvas,\ pt0,\ pt1,\ self.CLOSE\_COLOR,\ 2,\ cv2.LINE\_AA)}
+\DoxyCodeLine{01004\ }
+\DoxyCodeLine{01005\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ idx,\ (cx,\ cy)\ \textcolor{keywordflow}{in}\ enumerate(canvas\_pts):}
+\DoxyCodeLine{01006\ \ \ \ \ \ \ \ \ \ \ \ \ cv2.circle(canvas,\ (cx,\ cy),\ 5,\ self.POINT\_COLOR,\ -\/1,\ cv2.LINE\_AA)}
+\DoxyCodeLine{01007\ \ \ \ \ \ \ \ \ \ \ \ \ cv2.circle(canvas,\ (cx,\ cy),\ 5,\ (0,\ 0,\ 0),\ 1,\ cv2.LINE\_AA)}
+\DoxyCodeLine{01008\ \ \ \ \ \ \ \ \ \ \ \ \ lbl\ =\ str(idx)}
+\DoxyCodeLine{01009\ \ \ \ \ \ \ \ \ \ \ \ \ (tw,\ th),\ \_\ =\ cv2.getTextSize(lbl,\ cv2.FONT\_HERSHEY\_SIMPLEX,\ 0.4,\ 1)}
+\DoxyCodeLine{01010\ \ \ \ \ \ \ \ \ \ \ \ \ cv2.putText(canvas,\ lbl,\ (cx\ +\ 7,\ cy\ +\ 4),}
+\DoxyCodeLine{01011\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cv2.FONT\_HERSHEY\_SIMPLEX,\ 0.4,\ self.SHADOW\_COLOR,\ 2,\ cv2.LINE\_AA)}
+\DoxyCodeLine{01012\ \ \ \ \ \ \ \ \ \ \ \ \ cv2.putText(canvas,\ lbl,\ (cx\ +\ 7,\ cy\ +\ 4),}
+\DoxyCodeLine{01013\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cv2.FONT\_HERSHEY\_SIMPLEX,\ 0.4,\ self.POINT\_COLOR,\ 1,\ cv2.LINE\_AA)}
+\DoxyCodeLine{01014\ }
+\DoxyCodeLine{01015\ \ \ \ \ \ \ \ \ hud\_lines\ =\ [}
+\DoxyCodeLine{01016\ \ \ \ \ \ \ \ \ \ \ \ \ f\textcolor{stringliteral}{"{}ROI\ EDITOR\ \ |\ \ cam:\ \{self.active\_cam\}\ \ |\ \ pts:\ \{len(self.points)\}"{}},}
+\DoxyCodeLine{01017\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}LClick=add\ \ RClick=undo\ \ Enter=done\ \ Bksp=clear\ \ Tab=cam\ \ I=exit"{}},}
+\DoxyCodeLine{01018\ \ \ \ \ \ \ \ \ ]}
+\DoxyCodeLine{01019\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ li,\ line\ \textcolor{keywordflow}{in}\ enumerate(hud\_lines):}
+\DoxyCodeLine{01020\ \ \ \ \ \ \ \ \ \ \ \ \ yy\ =\ DISP\_H\ -\/\ 12\ -\/\ (len(hud\_lines)\ -\/\ 1\ -\/\ li)\ *\ 18}
+\DoxyCodeLine{01021\ \ \ \ \ \ \ \ \ \ \ \ \ (tw,\ th),\ \_\ =\ cv2.getTextSize(line,\ cv2.FONT\_HERSHEY\_SIMPLEX,\ 0.45,\ 1)}
+\DoxyCodeLine{01022\ \ \ \ \ \ \ \ \ \ \ \ \ cv2.rectangle(canvas,}
+\DoxyCodeLine{01023\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (col\_start\ +\ 4,\ yy\ -\/\ th\ -\/\ 4),}
+\DoxyCodeLine{01024\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (col\_start\ +\ tw\ +\ 10,\ yy\ +\ 4),}
+\DoxyCodeLine{01025\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (10,\ 10,\ 10),\ -\/1)}
+\DoxyCodeLine{01026\ \ \ \ \ \ \ \ \ \ \ \ \ cv2.putText(canvas,\ line,}
+\DoxyCodeLine{01027\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (col\_start\ +\ 7,\ yy),}
+\DoxyCodeLine{01028\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cv2.FONT\_HERSHEY\_SIMPLEX,\ 0.45,\ self.TEXT\_COLOR,\ 1,\ cv2.LINE\_AA)}
+\DoxyCodeLine{01029\ }
+\DoxyCodeLine{01030\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ col\_start\ <=\ mx\ <\ col\_start\ +\ panel\_w:}
+\DoxyCodeLine{01031\ \ \ \ \ \ \ \ \ \ \ \ \ lx\ =\ mx\ -\/\ col\_start}
+\DoxyCodeLine{01032\ \ \ \ \ \ \ \ \ \ \ \ \ tip\ =\ f\textcolor{stringliteral}{"{}(\{lx\},\ \{my\})"{}}}
+\DoxyCodeLine{01033\ \ \ \ \ \ \ \ \ \ \ \ \ (tw,\ th),\ \_\ =\ cv2.getTextSize(tip,\ cv2.FONT\_HERSHEY\_SIMPLEX,\ 0.4,\ 1)}
+\DoxyCodeLine{01034\ \ \ \ \ \ \ \ \ \ \ \ \ tx\ =\ min(mx\ +\ 10,\ canvas.shape[1]\ -\/\ tw\ -\/\ 6)}
+\DoxyCodeLine{01035\ \ \ \ \ \ \ \ \ \ \ \ \ ty\ =\ max(my\ -\/\ 10,\ th\ +\ 4)}
+\DoxyCodeLine{01036\ \ \ \ \ \ \ \ \ \ \ \ \ cv2.rectangle(canvas,\ (tx\ -\/\ 2,\ ty\ -\/\ th\ -\/\ 2),\ (tx\ +\ tw\ +\ 2,\ ty\ +\ 2),}
+\DoxyCodeLine{01037\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (20,\ 20,\ 20),\ -\/1)}
+\DoxyCodeLine{01038\ \ \ \ \ \ \ \ \ \ \ \ \ cv2.putText(canvas,\ tip,\ (tx,\ ty),}
+\DoxyCodeLine{01039\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cv2.FONT\_HERSHEY\_SIMPLEX,\ 0.4,\ self.TEXT\_COLOR,\ 1,\ cv2.LINE\_AA)}
+\DoxyCodeLine{01040\ }
+\DoxyCodeLine{01041\ }
+
+\end{DoxyCode}
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_a1b2e0a5865f54e8effc11d150e984f74}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!handle\_key@{handle\_key}}
+\index{handle\_key@{handle\_key}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{handle\_key()}{handle\_key()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_a1b2e0a5865f54e8effc11d150e984f74} 
+ bool find\+\_\+distance.\+ROIEditor.\+handle\+\_\+key (\begin{DoxyParamCaption}\item[{}]{self}{, }\item[{int}]{key}{}\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}Process a keypress.
+Returns True if the key was consumed (caller should not process further).
+Returns False if the key should be handled by the normal display loop.
+\end{DoxyVerb}
+ 
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00902}{902}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00902\ \ \ \ \ \textcolor{keyword}{def\ }handle\_key(self,\ key:\ int)\ -\/>\ bool:}
+\DoxyCodeLine{00903\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}"{}"{}}}
+\DoxyCodeLine{00904\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Process\ a\ keypress.}}
+\DoxyCodeLine{00905\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Returns\ True\ if\ the\ key\ was\ consumed\ (caller\ should\ not\ process\ further).}}
+\DoxyCodeLine{00906\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Returns\ False\ if\ the\ key\ should\ be\ handled\ by\ the\ normal\ display\ loop.}}
+\DoxyCodeLine{00907\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ "{}"{}"{}}}
+\DoxyCodeLine{00908\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ key\ ==\ ord(\textcolor{stringliteral}{'i'})\ \textcolor{keywordflow}{or}\ key\ ==\ ord(\textcolor{stringliteral}{'I'}):}
+\DoxyCodeLine{00909\ \ \ \ \ \ \ \ \ \ \ \ \ self.editor\_mode\ =\ \textcolor{keywordflow}{not}\ self.editor\_mode}
+\DoxyCodeLine{00910\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ self.editor\_mode:}
+\DoxyCodeLine{00911\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ print(f\textcolor{stringliteral}{"{}\(\backslash\)n[ROI\ Editor]\ ON\ \ —\ camera:\ \{self.active\_cam\}"{}})}
+\DoxyCodeLine{00912\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ print(\textcolor{stringliteral}{"{}\ \ Left-\/click\ to\ add\ points\ \ |\ \ Right-\/click\ to\ undo"{}})}
+\DoxyCodeLine{00913\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ print(\textcolor{stringliteral}{"{}\ \ Enter\ =\ finish\ polygon\ \ \ \ |\ \ Backspace\ =\ clear"{}})}
+\DoxyCodeLine{00914\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ print(\textcolor{stringliteral}{"{}\ \ Tab\ =\ switch\ camera\ \ \ \ \ \ \ |\ \ I\ =\ exit\ editor\(\backslash\)n"{}})}
+\DoxyCodeLine{00915\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}:}
+\DoxyCodeLine{00916\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ print(\textcolor{stringliteral}{"{}[ROI\ Editor]\ OFF"{}})}
+\DoxyCodeLine{00917\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ self.points.clear()}
+\DoxyCodeLine{00918\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{True}}
+\DoxyCodeLine{00919\ }
+\DoxyCodeLine{00920\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keywordflow}{not}\ self.editor\_mode:}
+\DoxyCodeLine{00921\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{False}}
+\DoxyCodeLine{00922\ }
+\DoxyCodeLine{00923\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Enter\ —\ finish\ polygon}}
+\DoxyCodeLine{00924\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ key\ \textcolor{keywordflow}{in}\ (13,\ 10):\ \ \textcolor{comment}{\#\ CR\ or\ LF}}
+\DoxyCodeLine{00925\ \ \ \ \ \ \ \ \ \ \ \ \ self.\_finish\_polygon()}
+\DoxyCodeLine{00926\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{True}}
+\DoxyCodeLine{00927\ }
+\DoxyCodeLine{00928\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Backspace\ —\ clear}}
+\DoxyCodeLine{00929\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ key\ ==\ 8:}
+\DoxyCodeLine{00930\ \ \ \ \ \ \ \ \ \ \ \ \ self.points.clear()}
+\DoxyCodeLine{00931\ \ \ \ \ \ \ \ \ \ \ \ \ print(\textcolor{stringliteral}{"{}[ROI\ Editor]\ Points\ cleared"{}})}
+\DoxyCodeLine{00932\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{True}}
+\DoxyCodeLine{00933\ }
+\DoxyCodeLine{00934\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Tab\ —\ cycle\ camera}}
+\DoxyCodeLine{00935\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ key\ ==\ 9:}
+\DoxyCodeLine{00936\ \ \ \ \ \ \ \ \ \ \ \ \ self.cam\_panel\_idx\ =\ (self.cam\_panel\_idx\ +\ 1)\ \%\ len(DISPLAY\_ORDER)}
+\DoxyCodeLine{00937\ \ \ \ \ \ \ \ \ \ \ \ \ self.points.clear()}
+\DoxyCodeLine{00938\ \ \ \ \ \ \ \ \ \ \ \ \ print(f\textcolor{stringliteral}{"{}[ROI\ Editor]\ Active\ camera:\ \{self.active\_cam\}\ \ (points\ cleared)"{}})}
+\DoxyCodeLine{00939\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{True}}
+\DoxyCodeLine{00940\ }
+\DoxyCodeLine{00941\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{False}}
+\DoxyCodeLine{00942\ }
+
+\end{DoxyCode}
+Here is the call graph for this function:\+
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classfind__distance_1_1_r_o_i_editor_a1b2e0a5865f54e8effc11d150e984f74_cgraph}
+\end{center}
+\end{figure}
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_a90ec241840ef8dc53793ccfb0e4f68ac}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!mouse\_cb@{mouse\_cb}}
+\index{mouse\_cb@{mouse\_cb}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{mouse\_cb()}{mouse\_cb()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_a90ec241840ef8dc53793ccfb0e4f68ac} 
+find\+\_\+distance.\+ROIEditor.\+mouse\+\_\+cb (\begin{DoxyParamCaption}\item[{}]{self}{, }\item[{}]{event}{, }\item[{}]{x}{, }\item[{}]{y}{, }\item[{}]{flags}{, }\item[{}]{param}{}\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}OpenCV mouse callback (runs in display thread).\end{DoxyVerb}
+ 
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00875}{875}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00875\ \ \ \ \ \textcolor{keyword}{def\ }mouse\_cb(self,\ event,\ x,\ y,\ flags,\ param):}
+\DoxyCodeLine{00876\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}"{}"{}OpenCV\ mouse\ callback\ (runs\ in\ display\ thread)."{}"{}"{}}}
+\DoxyCodeLine{00877\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keywordflow}{not}\ self.editor\_mode:}
+\DoxyCodeLine{00878\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}}
+\DoxyCodeLine{00879\ }
+\DoxyCodeLine{00880\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ x\ is\ in\ the\ stitched\ window;\ clamp\ to\ the\ active\ panel\ column}}
+\DoxyCodeLine{00881\ \ \ \ \ \ \ \ \ panel\_w\ =\ DISP\_W}
+\DoxyCodeLine{00882\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ left\ panel\ =\ DISPLAY\_ORDER[0],\ right\ panel\ =\ DISPLAY\_ORDER[1]}}
+\DoxyCodeLine{00883\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ we\ only\ care\ about\ the\ panel\ that\ matches\ self.cam\_panel\_idx}}
+\DoxyCodeLine{00884\ \ \ \ \ \ \ \ \ col\_start\ =\ self.cam\_panel\_idx\ *\ panel\_w}
+\DoxyCodeLine{00885\ \ \ \ \ \ \ \ \ col\_end\ =\ col\_start\ +\ panel\_w}
+\DoxyCodeLine{00886\ }
+\DoxyCodeLine{00887\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Track\ mouse\ regardless\ of\ which\ panel\ (for\ crosshair)}}
+\DoxyCodeLine{00888\ \ \ \ \ \ \ \ \ self.mouse\_pos\ =\ (x,\ y)}
+\DoxyCodeLine{00889\ }
+\DoxyCodeLine{00890\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ event\ ==\ cv2.EVENT\_LBUTTONDOWN:}
+\DoxyCodeLine{00891\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ col\_start\ <=\ x\ <\ col\_end:}
+\DoxyCodeLine{00892\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Convert\ to\ panel-\/local\ coordinates}}
+\DoxyCodeLine{00893\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lx\ =\ x\ -\/\ col\_start}
+\DoxyCodeLine{00894\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ self.points.append((lx,\ y))}
+\DoxyCodeLine{00895\ }
+\DoxyCodeLine{00896\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{elif}\ event\ ==\ cv2.EVENT\_RBUTTONDOWN:}
+\DoxyCodeLine{00897\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ self.points:}
+\DoxyCodeLine{00898\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ self.points.pop()}
+\DoxyCodeLine{00899\ }
+
+\end{DoxyCode}
+
+
+\label{doc-variable-members}
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_doc-variable-members}
+\doxysubsection{Member Data Documentation}
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_ac1a1ceb66feb1b91eb6a99c9cd403c42}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!\_spot\_counters@{\_spot\_counters}}
+\index{\_spot\_counters@{\_spot\_counters}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{\_spot\_counters}{\_spot\_counters}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_ac1a1ceb66feb1b91eb6a99c9cd403c42} 
+dict find\+\_\+distance.\+ROIEditor.\+\_\+spot\+\_\+counters = \{c:\+ len(ROIS.\+get(c, \+[$\,$]\+)) for c in \doxymbox{\hyperlink{find__distance_8py_a311236bc8f94663f7112c55cdb5b1f51}{CAM\+\_\+\+ORDER}}\}\hspace{0.3cm}{\ttfamily [protected]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00860}{860}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_aa273b22524031681f0253615545304bd}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!cam\_panel\_idx@{cam\_panel\_idx}}
+\index{cam\_panel\_idx@{cam\_panel\_idx}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{cam\_panel\_idx}{cam\_panel\_idx}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_aa273b22524031681f0253615545304bd} 
+int find\+\_\+distance.\+ROIEditor.\+cam\+\_\+panel\+\_\+idx = 0}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00858}{858}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_a85043595b820785d517b6dc253a0db30}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!CLOSE\_COLOR@{CLOSE\_COLOR}}
+\index{CLOSE\_COLOR@{CLOSE\_COLOR}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{CLOSE\_COLOR}{CLOSE\_COLOR}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_a85043595b820785d517b6dc253a0db30} 
+find\+\_\+distance.\+ROIEditor.\+CLOSE\+\_\+\+COLOR = (180, 0, 255)\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00847}{847}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_a10a8961b0f81a148332cae4730e11355}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!CURSOR\_COLOR@{CURSOR\_COLOR}}
+\index{CURSOR\_COLOR@{CURSOR\_COLOR}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{CURSOR\_COLOR}{CURSOR\_COLOR}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_a10a8961b0f81a148332cae4730e11355} 
+find\+\_\+distance.\+ROIEditor.\+CURSOR\+\_\+\+COLOR = (200, 200, 200)\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00849}{849}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_aa209334c6638a439afadb103ad0cf8e2}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!editor\_mode@{editor\_mode}}
+\index{editor\_mode@{editor\_mode}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{editor\_mode}{editor\_mode}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_aa209334c6638a439afadb103ad0cf8e2} 
+bool find\+\_\+distance.\+ROIEditor.\+editor\+\_\+mode = False}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00854}{854}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_a7aba6a7e9c665db798cc69f3c483b343}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!FILL\_COLOR@{FILL\_COLOR}}
+\index{FILL\_COLOR@{FILL\_COLOR}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{FILL\_COLOR}{FILL\_COLOR}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_a7aba6a7e9c665db798cc69f3c483b343} 
+find\+\_\+distance.\+ROIEditor.\+FILL\+\_\+\+COLOR = (0, 180, 255)\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00848}{848}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_a8c18e4256bd445394d94d89a311fffef}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!LINE\_COLOR@{LINE\_COLOR}}
+\index{LINE\_COLOR@{LINE\_COLOR}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{LINE\_COLOR}{LINE\_COLOR}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_a8c18e4256bd445394d94d89a311fffef} 
+find\+\_\+distance.\+ROIEditor.\+LINE\+\_\+\+COLOR = (0, 200, 255)\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00846}{846}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_a11ff0b09ad78f9410be8203f44863dc8}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!mouse\_pos@{mouse\_pos}}
+\index{mouse\_pos@{mouse\_pos}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{mouse\_pos}{mouse\_pos}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_a11ff0b09ad78f9410be8203f44863dc8} 
+tuple find\+\_\+distance.\+ROIEditor.\+mouse\+\_\+pos = (0, 0)}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00856}{856}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_a876330f42fe83cbc19d1ac65effe7b58}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!POINT\_COLOR@{POINT\_COLOR}}
+\index{POINT\_COLOR@{POINT\_COLOR}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{POINT\_COLOR}{POINT\_COLOR}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_a876330f42fe83cbc19d1ac65effe7b58} 
+find\+\_\+distance.\+ROIEditor.\+POINT\+\_\+\+COLOR = (0, 255, 255)\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00845}{845}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_ad68105e72692f125d5c700e09f9da282}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!points@{points}}
+\index{points@{points}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{points}{points}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_ad68105e72692f125d5c700e09f9da282} 
+find\+\_\+distance.\+ROIEditor.\+points = \+[$\,$]\+}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00855}{855}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_a354a4587a0554d60877f7c8b4bdb9ace}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!SHADOW\_COLOR@{SHADOW\_COLOR}}
+\index{SHADOW\_COLOR@{SHADOW\_COLOR}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{SHADOW\_COLOR}{SHADOW\_COLOR}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_a354a4587a0554d60877f7c8b4bdb9ace} 
+find\+\_\+distance.\+ROIEditor.\+SHADOW\+\_\+\+COLOR = (0, 0, 0)\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00851}{851}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_r_o_i_editor_a00521e39ce99ff24c24999833b74980d}\index{find\_distance.ROIEditor@{find\_distance.ROIEditor}!TEXT\_COLOR@{TEXT\_COLOR}}
+\index{TEXT\_COLOR@{TEXT\_COLOR}!find\_distance.ROIEditor@{find\_distance.ROIEditor}}
+\doxysubsubsection{\texorpdfstring{TEXT\_COLOR}{TEXT\_COLOR}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_r_o_i_editor_a00521e39ce99ff24c24999833b74980d} 
+find\+\_\+distance.\+ROIEditor.\+TEXT\+\_\+\+COLOR = (255, 255, 255)\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l00850}{850}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+
+The documentation for this class was generated from the following file:\+\begin{DoxyCompactItemize}
+\item 
+src/\+\+Dashboard/\+src/\+backend/\+\doxymbox{\hyperlink{find__distance_8py}{find\+\_\+distance.\+py}}\end{DoxyCompactItemize}

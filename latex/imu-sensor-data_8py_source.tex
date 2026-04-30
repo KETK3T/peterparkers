@@ -1,0 +1,24 @@
+\doxysection{imu-\/sensor-\/data.py}
+\hypertarget{imu-sensor-data_8py_source}{}\label{imu-sensor-data_8py_source}\index{src/imu-\/gps/imu-\/sensor-\/data.py@{src/imu-\/gps/imu-\/sensor-\/data.py}}
+\doxymbox{\hyperlink{imu-sensor-data_8py}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00006}00006\ \textcolor{keyword}{import}\ time}
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00007}00007\ }
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00008}00008\ \textcolor{keyword}{import}\ board}
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00009}00009\ }
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00010}00010\ \textcolor{keyword}{import}\ adafruit\_icm20x}
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00011}00011\ }
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00012}00012\ i2c\ =\ board.I2C()\ \ \textcolor{comment}{\#\ uses\ board.SCL\ and\ board.SDA}}
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00013}00013\ \textcolor{comment}{\#\ i2c\ =\ board.STEMMA\_I2C()\ \ \#\ For\ using\ the\ built-\/in\ STEMMA\ QT\ connector\ on\ a\ microcontroller}}
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00014}00014\ icm\ =\ adafruit\_icm20x.ICM20948(i2c)}
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00015}00015\ }
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00016}00016\ }
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00017}00017\ \textcolor{keywordflow}{while}\ \textcolor{keyword}{True}:}
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00018}00018\ \ \ \ \ print(\textcolor{stringliteral}{"{}Acceleration:\ X:\{:.2f\},\ Y:\ \{:.2f\},\ Z:\ \{:.2f\}\ m/s\string^2"{}}.format(*icm.acceleration))}
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00019}00019\ \ \ \ \ print(\textcolor{stringliteral}{"{}Gyro\ X:\{:.2f\},\ Y:\ \{:.2f\},\ Z:\ \{:.2f\}\ rads/s"{}}.format(*icm.gyro))}
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00020}00020\ \ \ \ \ print(\textcolor{stringliteral}{"{}Magnetometer\ X:\{:.2f\},\ Y:\ \{:.2f\},\ Z:\ \{:.2f\}\ uT"{}}.format(*icm.magnetic))}
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00021}00021\ \ \ \ \ print(\textcolor{stringliteral}{"{}"{}})}
+\DoxyCodeLine{\Hypertarget{imu-sensor-data_8py_source_l00022}00022\ \ \ \ \ time.sleep(0.5)}
+
+\end{DoxyCode}

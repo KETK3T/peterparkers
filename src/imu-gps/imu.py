@@ -1,3 +1,7 @@
+##  @file imu.py
+#   @brief Threaded IMU wrapper for the ICM20948 sensor providing continuous background reads
+#
+
 import threading
 import board
 import adafruit_icm20x

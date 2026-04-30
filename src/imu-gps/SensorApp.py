@@ -1,4 +1,5 @@
-# App libraries
+##  @file app.py
+#   @brief Flask server that fuses IMU and GPS data through an EKF and streams the state via SSE.
 from flask import Flask, Response
 import json
 import time

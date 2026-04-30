@@ -1,0 +1,430 @@
+\doxysection{Map\+View.\+jsx}
+\hypertarget{_map_view_8jsx_source}{}\label{_map_view_8jsx_source}\index{src/Dashboard/src/frontend/MapView.jsx@{src/Dashboard/src/frontend/MapView.jsx}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00001}00001\ import\ './MapView.css'}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00002}00002\ import\ \{\ MapContainer,\ TileLayer,\ Marker,\ Popup,\ Rectangle,\ useMap\ \}\ from\ "{}react-\/leaflet"{}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00003}00003\ import\ 'leaflet/dist/leaflet.css'}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00004}00004\ import\ \{\ useEffect,\ useState,\ useRef\ \}\ from\ "{}react"{}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00005}00005\ import\ \{\ snapLongitude,\ snapLatitude,\ snapLongitudeBottom\ \}\ from\ "{}./regions"{}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00006}00006\ import\ 'leaflet-\/rotate'}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00007}00007\ import\ L\ from\ "{}leaflet"{}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00008}00008\ import\ markerIcon\ from\ "{}leaflet/dist/images/marker-\/icon.png"{}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00009}00009\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00010}00010\ const\ START\_LAT\ =\ 32.72626821031165}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00011}00011\ const\ STEP\ =\ 0.00002465}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00012}00012\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00013}00013\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00014}00014\ function\ snapLatitude\_grid(lat)\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00015}00015\ \ \ const\ steps\ =\ Math.round((lat\ -\/\ START\_LAT)\ /\ STEP)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00016}00016\ \ \ return\ START\_LAT\ +\ steps\ *\ STEP}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00017}00017\ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00018}00018\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00019}00019\ function\ DrawRectanglesLeft(\{\ spotStates,\ markerPosition,\ rotation\ \})\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00020}00020\ \ \ const\ heightOfSpot\ =\ 0.0000201}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00021}00021\ \ \ const\ heightOfLine\ =\ 0.0000043}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00022}00022\ \ \ const\ heightOfSpotForUpRight\ =\ 0.0000202}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00023}00023\ \ \ const\ heightOfLineForUpRight\ =\ 0.0000045}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00024}00024\ \ \ const\ spacing\ =\ heightOfSpot\ +\ heightOfLine}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00025}00025\ \ \ const\ spacingForUpRight\ =\ heightOfSpotForUpRight\ +\ heightOfLineForUpRight}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00026}00026\ \ \ const\ DistanceFromMarker2SpotTL\ =\ 0.00010085}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00027}00027\ \ \ const\ DistanceFromMarker2SpotBR\ =\ 0.00005655}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00028}00028\ \ \ const\ DistanceFromMarker2SpotTLLng\ =\ 0.00008185}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00029}00029\ \ \ const\ DistanceFromMarker2SpotBRLng\ =\ 0.00004455}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00030}00030\ \ \ const\ heightOfSpotLng\ =\ heightOfSpot\ *\ (111000\ /\ 93000)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00031}00031\ \ \ const\ spacingLng\ =\ spacing\ *\ (111000\ /\ 93000)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00032}00032\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00033}00033\ \ \ const\ mid\ =\ Math.ceil(spotStates.length\ /\ 2)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00034}00034\ \ \ const\ upper\ =\ spotStates.slice(0,\ mid).reverse()}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00035}00035\ \ \ const\ lower\ =\ spotStates.slice(mid)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00036}00036\ \ \ const\ rectangles\ =\ []}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00037}00037\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00038}00038\ \ \ if\ (rotation\ ===\ 90)\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00039}00039\ \ \ \ \ lower.forEach((state,\ index)\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00040}00040\ \ \ \ \ \ \ const\ offset\ =\ index\ *\ spacingLng}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00041}00041\ \ \ \ \ \ \ const\ bounds\ =\ [}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00042}00042\ \ \ \ \ \ \ \ \ [markerPosition[0]\ -\/\ DistanceFromMarker2SpotTLLng,\ markerPosition[1]\ +\ offset],}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00043}00043\ \ \ \ \ \ \ \ \ [markerPosition[0]\ -\/\ DistanceFromMarker2SpotBRLng,\ markerPosition[1]\ +\ heightOfSpotLng\ +\ offset]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00044}00044\ \ \ \ \ \ \ ]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00045}00045\ \ \ \ \ \ \ rectangles.push(}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00046}00046\ \ \ \ \ \ \ \ \ <Rectangle\ key=\{`lower-\/\$\{index\}`\}\ bounds=\{bounds\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00047}00047\ \ \ \ \ \ \ \ \ \ \ pathOptions=\{\{\ color:\ state\ ===\ "{}taken"{}\ ?\ "{}red"{}\ :\ "{}green"{},\ weight:\ 2\ \}\}\ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00048}00048\ \ \ \ \ \ \ )}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00049}00049\ \ \ \ \ \})}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00050}00050\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00051}00051\ \ \ \ \ upper.forEach((state,\ index)\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00052}00052\ \ \ \ \ \ \ const\ offset\ =\ (index\ +\ 1)\ *\ spacingLng}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00053}00053\ \ \ \ \ \ \ const\ bounds\ =\ [}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00054}00054\ \ \ \ \ \ \ \ \ [markerPosition[0]\ -\/\ DistanceFromMarker2SpotTLLng,\ markerPosition[1]\ -\/\ offset],}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00055}00055\ \ \ \ \ \ \ \ \ [markerPosition[0]\ -\/\ DistanceFromMarker2SpotBRLng,\ markerPosition[1]\ +\ heightOfSpotLng\ -\/\ offset]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00056}00056\ \ \ \ \ \ \ ]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00057}00057\ \ \ \ \ \ \ rectangles.push(}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00058}00058\ \ \ \ \ \ \ \ \ <Rectangle\ key=\{`upper-\/\$\{index\}`\}\ bounds=\{bounds\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00059}00059\ \ \ \ \ \ \ \ \ \ \ pathOptions=\{\{\ color:\ state\ ===\ "{}taken"{}\ ?\ "{}red"{}\ :\ "{}green"{},\ weight:\ 2\ \}\}\ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00060}00060\ \ \ \ \ \ \ )}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00061}00061\ \ \ \ \ \})}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00062}00062\ \ \ \}\ else\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00063}00063\ \ \ \ \ lower.forEach((state,\ index)\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00064}00064\ \ \ \ \ \ \ const\ offset\ =\ index\ *\ spacingForUpRight}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00065}00065\ \ \ \ \ \ \ const\ bounds\ =\ [}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00066}00066\ \ \ \ \ \ \ \ \ [markerPosition[0]\ -\/\ offset,\ markerPosition[1]\ -\/\ DistanceFromMarker2SpotTL],}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00067}00067\ \ \ \ \ \ \ \ \ [markerPosition[0]\ -\/\ heightOfSpot\ -\/\ offset,\ markerPosition[1]\ -\/\ DistanceFromMarker2SpotBR]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00068}00068\ \ \ \ \ \ \ ]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00069}00069\ \ \ \ \ \ \ rectangles.push(}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00070}00070\ \ \ \ \ \ \ \ \ <Rectangle\ key=\{`lower-\/\$\{index\}`\}\ bounds=\{bounds\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00071}00071\ \ \ \ \ \ \ \ \ \ \ pathOptions=\{\{\ color:\ state\ ===\ "{}taken"{}\ ?\ "{}red"{}\ :\ "{}green"{},\ weight:\ 2\ \}\}\ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00072}00072\ \ \ \ \ \ \ )}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00073}00073\ \ \ \ \ \})}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00074}00074\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00075}00075\ \ \ \ \ upper.forEach((state,\ index)\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00076}00076\ \ \ \ \ \ \ const\ offset\ =\ (index\ +\ 1)\ *\ spacingForUpRight}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00077}00077\ \ \ \ \ \ \ const\ bounds\ =\ [}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00078}00078\ \ \ \ \ \ \ \ \ [markerPosition[0]\ +\ offset,\ markerPosition[1]\ -\/\ DistanceFromMarker2SpotTL],}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00079}00079\ \ \ \ \ \ \ \ \ [markerPosition[0]\ -\/\ heightOfSpot\ +\ offset,\ markerPosition[1]\ -\/\ DistanceFromMarker2SpotBR]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00080}00080\ \ \ \ \ \ \ ]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00081}00081\ \ \ \ \ \ \ rectangles.push(}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00082}00082\ \ \ \ \ \ \ \ \ <Rectangle\ key=\{`upper-\/\$\{index\}`\}\ bounds=\{bounds\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00083}00083\ \ \ \ \ \ \ \ \ \ \ pathOptions=\{\{\ color:\ state\ ===\ "{}taken"{}\ ?\ "{}red"{}\ :\ "{}green"{},\ weight:\ 2\ \}\}\ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00084}00084\ \ \ \ \ \ \ )}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00085}00085\ \ \ \ \ \})}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00086}00086\ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00087}00087\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00088}00088\ \ \ return\ <>\{rectangles\}</>}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00089}00089\ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00090}00090\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00091}00091\ function\ DrawRectanglesRight(\{\ spotStates,\ markerPosition,\ rotation\ \})\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00092}00092\ \ \ const\ heightOfSpot\ =\ 0.0000201}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00093}00093\ \ \ const\ heightOfLine\ =\ 0.0000043}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00094}00094\ \ \ const\ heightOfSpotForUpRight\ =\ 0.0000202}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00095}00095\ \ \ const\ heightOfLineForUpRight\ =\ 0.0000045}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00096}00096\ \ \ const\ spacing\ =\ heightOfSpot\ +\ heightOfLine}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00097}00097\ \ \ const\ spacingForUpRight\ =\ heightOfSpotForUpRight\ +\ heightOfLineForUpRight}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00098}00098\ \ \ const\ DistanceFromMarker2SpotTL\ =\ 0.00009485}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00099}00099\ \ \ const\ DistanceFromMarker2SpotBR\ =\ 0.00005655}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00100}00100\ \ \ const\ DistanceFromMarker2SpotTLLng\ =\ 0.00008585}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00101}00101\ \ \ const\ DistanceFromMarker2SpotBRLng\ =\ 0.00004455}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00102}00102\ \ \ const\ heightOfSpotLng\ =\ heightOfSpot\ *\ (111000\ /\ 93000)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00103}00103\ \ \ const\ spacingLng\ =\ spacing\ *\ (111000\ /\ 93000)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00104}00104\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00105}00105\ \ \ const\ mid\ =\ Math.ceil(spotStates.length\ /\ 2)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00106}00106\ \ \ const\ upper\ =\ spotStates.slice(0,\ mid).reverse()}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00107}00107\ \ \ const\ lower\ =\ spotStates.slice(mid)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00108}00108\ \ \ const\ rectangles\ =\ []}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00109}00109\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00110}00110\ \ \ if\ (rotation\ ===\ 90)\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00111}00111\ \ \ \ \ lower.forEach((state,\ index)\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00112}00112\ \ \ \ \ \ \ const\ offset\ =\ index\ *\ spacingLng}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00113}00113\ \ \ \ \ \ \ const\ bounds\ =\ [}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00114}00114\ \ \ \ \ \ \ \ \ [markerPosition[0]\ +\ DistanceFromMarker2SpotBRLng,\ markerPosition[1]\ +\ offset],}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00115}00115\ \ \ \ \ \ \ \ \ [markerPosition[0]\ +\ DistanceFromMarker2SpotTLLng,\ markerPosition[1]\ +\ heightOfSpotLng\ +\ offset]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00116}00116\ \ \ \ \ \ \ ]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00117}00117\ \ \ \ \ \ \ rectangles.push(}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00118}00118\ \ \ \ \ \ \ \ \ <Rectangle\ key=\{`lower-\/\$\{index\}`\}\ bounds=\{bounds\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00119}00119\ \ \ \ \ \ \ \ \ \ \ pathOptions=\{\{\ color:\ state\ ===\ "{}taken"{}\ ?\ "{}red"{}\ :\ "{}green"{},\ weight:\ 2\ \}\}\ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00120}00120\ \ \ \ \ \ \ )}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00121}00121\ \ \ \ \ \})}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00122}00122\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00123}00123\ \ \ \ \ upper.forEach((state,\ index)\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00124}00124\ \ \ \ \ \ \ const\ offset\ =\ (index\ +\ 1)\ *\ spacingLng}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00125}00125\ \ \ \ \ \ \ const\ bounds\ =\ [}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00126}00126\ \ \ \ \ \ \ \ \ [markerPosition[0]\ +\ DistanceFromMarker2SpotBRLng,\ markerPosition[1]\ -\/\ offset],}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00127}00127\ \ \ \ \ \ \ \ \ [markerPosition[0]\ +\ DistanceFromMarker2SpotTLLng,\ markerPosition[1]\ +\ heightOfSpotLng\ -\/\ offset]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00128}00128\ \ \ \ \ \ \ ]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00129}00129\ \ \ \ \ \ \ rectangles.push(}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00130}00130\ \ \ \ \ \ \ \ \ <Rectangle\ key=\{`upper-\/\$\{index\}`\}\ bounds=\{bounds\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00131}00131\ \ \ \ \ \ \ \ \ \ \ pathOptions=\{\{\ color:\ state\ ===\ "{}taken"{}\ ?\ "{}red"{}\ :\ "{}green"{},\ weight:\ 2\ \}\}\ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00132}00132\ \ \ \ \ \ \ )}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00133}00133\ \ \ \ \ \})}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00134}00134\ \ \ \}\ else\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00135}00135\ \ \ \ \ lower.forEach((state,\ index)\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00136}00136\ \ \ \ \ \ \ const\ offset\ =\ index\ *\ spacingForUpRight}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00137}00137\ \ \ \ \ \ \ const\ bounds\ =\ [}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00138}00138\ \ \ \ \ \ \ \ \ [markerPosition[0]\ -\/\ offset,\ markerPosition[1]\ +\ DistanceFromMarker2SpotTL],}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00139}00139\ \ \ \ \ \ \ \ \ [markerPosition[0]\ -\/\ heightOfSpot\ -\/\ offset,\ markerPosition[1]\ +\ DistanceFromMarker2SpotBR]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00140}00140\ \ \ \ \ \ \ ]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00141}00141\ \ \ \ \ \ \ rectangles.push(}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00142}00142\ \ \ \ \ \ \ \ \ <Rectangle\ key=\{`lower-\/\$\{index\}`\}\ bounds=\{bounds\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00143}00143\ \ \ \ \ \ \ \ \ \ \ pathOptions=\{\{\ color:\ state\ ===\ "{}taken"{}\ ?\ "{}red"{}\ :\ "{}green"{},\ weight:\ 2\ \}\}\ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00144}00144\ \ \ \ \ \ \ )}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00145}00145\ \ \ \ \ \})}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00146}00146\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00147}00147\ \ \ \ \ upper.forEach((state,\ index)\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00148}00148\ \ \ \ \ \ \ const\ offset\ =\ (index\ +\ 1)\ *\ spacingForUpRight}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00149}00149\ \ \ \ \ \ \ const\ bounds\ =\ [}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00150}00150\ \ \ \ \ \ \ \ \ [markerPosition[0]\ +\ offset,\ markerPosition[1]\ +\ DistanceFromMarker2SpotTL],}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00151}00151\ \ \ \ \ \ \ \ \ [markerPosition[0]\ -\/\ heightOfSpot\ +\ offset,\ markerPosition[1]\ +\ DistanceFromMarker2SpotBR]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00152}00152\ \ \ \ \ \ \ ]}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00153}00153\ \ \ \ \ \ \ rectangles.push(}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00154}00154\ \ \ \ \ \ \ \ \ <Rectangle\ key=\{`upper-\/\$\{index\}`\}\ bounds=\{bounds\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00155}00155\ \ \ \ \ \ \ \ \ \ \ pathOptions=\{\{\ color:\ state\ ===\ "{}taken"{}\ ?\ "{}red"{}\ :\ "{}green"{},\ weight:\ 2\ \}\}\ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00156}00156\ \ \ \ \ \ \ )}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00157}00157\ \ \ \ \ \})}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00158}00158\ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00159}00159\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00160}00160\ \ \ return\ <>\{rectangles\}</>}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00161}00161\ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00162}00162\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00163}00163\ function\ RotateMap(\{\ bearing\ \})\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00164}00164\ \ \ const\ map\ =\ useMap()}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00165}00165\ \ \ const\ currentBearingRef\ =\ useRef(0)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00166}00166\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00167}00167\ \ \ useEffect(()\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00168}00168\ \ \ \ \ const\ start\ =\ currentBearingRef.current}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00169}00169\ \ \ \ \ const\ end\ =\ bearing}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00170}00170\ \ \ \ \ const\ duration\ =\ 800\ \ //\ ms\ —\ increase\ for\ slower,\ decrease\ for\ faster}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00171}00171\ \ \ \ \ const\ startTime\ =\ performance.now()}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00172}00172\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00173}00173\ \ \ \ \ const\ animate\ =\ (now)\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00174}00174\ \ \ \ \ \ \ const\ elapsed\ =\ now\ -\/\ startTime}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00175}00175\ \ \ \ \ \ \ const\ progress\ =\ Math.min(elapsed\ /\ duration,\ 1)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00176}00176\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00177}00177\ \ \ \ \ \ \ //\ Ease\ in-\/out}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00178}00178\ \ \ \ \ \ \ const\ eased\ =\ progress\ <\ 0.5}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00179}00179\ \ \ \ \ \ \ \ \ ?\ 2\ *\ progress\ *\ progress}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00180}00180\ \ \ \ \ \ \ \ \ :\ -\/1\ +\ (4\ -\/\ 2\ *\ progress)\ *\ progress}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00181}00181\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00182}00182\ \ \ \ \ \ \ const\ current\ =\ start\ +\ (end\ -\/\ start)\ *\ eased}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00183}00183\ \ \ \ \ \ \ map.setBearing(current)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00184}00184\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00185}00185\ \ \ \ \ \ \ if\ (progress\ <\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00186}00186\ \ \ \ \ \ \ \ \ requestAnimationFrame(animate)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00187}00187\ \ \ \ \ \ \ \}\ else\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00188}00188\ \ \ \ \ \ \ \ \ currentBearingRef.current\ =\ end}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00189}00189\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00190}00190\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00191}00191\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00192}00192\ \ \ \ \ requestAnimationFrame(animate)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00193}00193\ \ \ \},\ [bearing,\ map])}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00194}00194\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00195}00195\ \ \ return\ null}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00196}00196\ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00197}00197\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00198}00198\ function\ FollowMarker(\{\ position,\ following,\ shouldRecenter,\ onRecentered,\ mapReady\ \})\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00199}00199\ \ \ const\ map\ =\ useMap()}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00200}00200\ \ \ const\ hasCenteredRef\ =\ useRef(false)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00201}00201\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00202}00202\ \ \ useEffect(()\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00203}00203\ \ \ \ \ if\ (!mapReady\ ||\ !position\ ||\ !following)\ return}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00204}00204\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00205}00205\ \ \ \ \ const\ zoom\ =\ Math.max(map.getZoom(),\ 21)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00206}00206\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00207}00207\ \ \ \ \ //\ 🔥\ Force\ FIRST\ real\ recenter\ AFTER\ map\ is\ ready}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00208}00208\ \ \ \ \ if\ (!hasCenteredRef.current)\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00209}00209\ \ \ \ \ \ \ map.setView(position,\ zoom,\ \{\ animate:\ false\ \})}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00210}00210\ \ \ \ \ \ \ hasCenteredRef.current\ =\ true}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00211}00211\ \ \ \ \ \ \ return}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00212}00212\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00213}00213\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00214}00214\ \ \ \ \ //\ Normal\ follow\ behavior}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00215}00215\ \ \ \ \ map.setView(position,\ zoom,\ \{\ animate:\ true\ \})}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00216}00216\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00217}00217\ \ \ \},\ [position,\ following,\ mapReady,\ map])}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00218}00218\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00219}00219\ \ \ useEffect(()\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00220}00220\ \ \ \ \ if\ (shouldRecenter\ \&\&\ position\ \&\&\ mapReady)\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00221}00221\ \ \ \ \ \ \ map.setView(position,\ 21,\ \{\ animate:\ true\ \})}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00222}00222\ \ \ \ \ \ \ onRecentered()}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00223}00223\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00224}00224\ \ \ \},\ [shouldRecenter,\ position,\ mapReady,\ map])}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00225}00225\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00226}00226\ \ \ return\ null}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00227}00227\ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00228}00228\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00229}00229\ function\ StopFollowingOnInteract(\{\ setFollowing,\ recenter\ \})\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00230}00230\ \ \ const\ map\ =\ useMap()}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00231}00231\ \ \ const\ userInteractedRef\ =\ useRef(false)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00232}00232\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00233}00233\ \ \ useEffect(()\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00234}00234\ \ \ \ \ const\ markInteracted\ =\ ()\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00235}00235\ \ \ \ \ \ \ userInteractedRef.current\ =\ true}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00236}00236\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00237}00237\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00238}00238\ \ \ \ \ const\ stop\ =\ ()\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00239}00239\ \ \ \ \ \ \ //\ ❌\ Ignore\ fake\ initial\ events}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00240}00240\ \ \ \ \ \ \ if\ (!userInteractedRef.current)\ return}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00241}00241\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00242}00242\ \ \ \ \ \ \ if\ (!recenter)\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00243}00243\ \ \ \ \ \ \ \ \ setFollowing(false)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00244}00244\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00245}00245\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00246}00246\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00247}00247\ \ \ \ \ //\ Detect\ REAL\ user\ interaction}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00248}00248\ \ \ \ \ map.on('mousedown',\ markInteracted)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00249}00249\ \ \ \ \ map.on('touchstart',\ markInteracted)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00250}00250\ \ \ \ \ map.on('wheel',\ markInteracted)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00251}00251\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00252}00252\ \ \ \ \ //\ Stop\ following\ only\ AFTER\ interaction}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00253}00253\ \ \ \ \ map.on('dragstart',\ stop)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00254}00254\ \ \ \ \ map.on('zoomstart',\ stop)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00255}00255\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00256}00256\ \ \ \ \ return\ ()\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00257}00257\ \ \ \ \ \ \ map.off('mousedown',\ markInteracted)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00258}00258\ \ \ \ \ \ \ map.off('touchstart',\ markInteracted)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00259}00259\ \ \ \ \ \ \ map.off('wheel',\ markInteracted)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00260}00260\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00261}00261\ \ \ \ \ \ \ map.off('dragstart',\ stop)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00262}00262\ \ \ \ \ \ \ map.off('zoomstart',\ stop)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00263}00263\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00264}00264\ \ \ \},\ [map,\ recenter,\ setFollowing])}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00265}00265\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00266}00266\ \ \ return\ null}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00267}00267\ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00268}00268\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00269}00269\ function\ MapView()\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00270}00270\ \ \ const\ [livePoint,\ setLivePoint]\ =\ useState(null)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00271}00271\ \ \ const\ [leftSide,\ setLeftSide]\ =\ useState([])}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00272}00272\ \ \ const\ [rightSide,\ setRightSide]\ =\ useState([])}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00273}00273\ \ \ const\ [rotation,\ setRotation]\ =\ useState(0)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00274}00274\ \ \ const\ [following,\ setFollowing]\ =\ useState(true)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00275}00275\ \ \ const\ [recenter,\ setRecenter]\ =\ useState(false)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00276}00276\ \ \ const\ [mapReady,\ setMapReady]\ =\ useState(false)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00277}00277\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00278}00278\ \ \ //\ WebSocket\ for\ GPS}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00279}00279\ useEffect(()\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00280}00280\ \ \ const\ eventSource\ =\ new\ EventSource("{}http://localhost:5000/stream"{})}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00281}00281\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00282}00282\ \ \ eventSource.onmessage\ =\ (event)\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00283}00283\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00284}00284\ \ \ \ \ \ \ console.log("{}RAW\ EVENT:"{},\ event.data)\ //log\ to\ see\ if\ update}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00285}00285\ \ \ \ \ try\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00286}00286\ \ \ \ \ \ \ const\ data\ =\ JSON.parse(event.data)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00287}00287\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00288}00288\ \ \ \ \ \ \ const\ x\ =\ data.x}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00289}00289\ \ \ \ \ \ \ const\ y\ =\ data.y}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00290}00290\ \ \ \ \ \ \ const\ v\ =\ data.v}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00291}00291\ \ \ \ \ \ \ const\ mag\_yaw\ =\ data.mag\_yaw}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00292}00292\ \ \ \ \ \ \ const\ lat\ =\ data.lat}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00293}00293\ \ \ \ \ \ \ const\ lon\ =\ data.lon\ \ //\ NOTE:\ your\ backend\ uses\ "{}lon"{},\ not\ "{}long"{}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00294}00294\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00295}00295\ \ \ \ \ \ \ console.log("{}LAT/LON:"{},\ lat,\ lon)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00296}00296\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00297}00297\ \ \ \ \ \ \ const\ isBelow\ =\ lat\ <\ START\_LAT}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00298}00298\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00299}00299\ \ \ \ \ \ \ const\ snappedLat\ =\ isBelow}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00300}00300\ \ \ \ \ \ \ \ \ ?\ snapLatitude(lat)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00301}00301\ \ \ \ \ \ \ \ \ :\ snapLatitude\_grid(lat)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00302}00302\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00303}00303\ \ \ \ \ \ \ const\ snappedLong\ =\ isBelow}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00304}00304\ \ \ \ \ \ \ \ \ ?\ snapLongitudeBottom(lon)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00305}00305\ \ \ \ \ \ \ \ \ :\ snapLongitude(lon)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00306}00306\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00307}00307\ \ \ \ \ \ \ setLivePoint([snappedLat,\ snappedLong])}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00308}00308\ \ \ \ \ \ \ setRotation(isBelow\ ?\ 90\ :\ 0)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00309}00309\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00310}00310\ \ \ \ \ \}\ catch\ (err)\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00311}00311\ \ \ \ \ \ \ console.error("{}Error\ parsing\ SSE\ data:"{},\ err)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00312}00312\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00313}00313\ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00314}00314\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00315}00315\ \ \ eventSource.onerror\ =\ (err)\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00316}00316\ \ \ \ \ console.error("{}SSE\ connection\ error:"{},\ err)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00317}00317\ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00318}00318\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00319}00319\ \ \ return\ ()\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00320}00320\ \ \ \ \ eventSource.close()}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00321}00321\ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00322}00322\ \},\ [])}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00323}00323\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00324}00324\ \ \ //\ Poll\ Flask\ endpoint\ every\ second\ for\ parking\ spot\ states}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00325}00325\ \ \ useEffect(()\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00326}00326\ \ \ \ \ const\ mapState\ =\ (val)\ =>\ val\ ===\ "{}Car"{}\ ?\ "{}taken"{}\ :\ "{}empty"{}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00327}00327\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00328}00328\ \ \ \ \ const\ fetchSpots\ =\ async\ ()\ =>\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00329}00329\ \ \ \ \ \ \ try\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00330}00330\ \ \ \ \ \ \ \ \ const\ res\ =\ await\ fetch("{}http://localhost:5001/detections"{})}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00331}00331\ \ \ \ \ \ \ \ \ const\ data\ =\ await\ res.json()}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00332}00332\ \ \ \ \ \ \ \ \ setLeftSide(data.spots.Left.map(mapState))}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00333}00333\ \ \ \ \ \ \ \ \ setRightSide(data.spots.Right.map(mapState))}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00334}00334\ \ \ \ \ \ \ \}\ catch\ (err)\ \{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00335}00335\ \ \ \ \ \ \ \ \ console.error("{}Failed\ to\ fetch\ parking\ spots:"{},\ err)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00336}00336\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00337}00337\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00338}00338\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00339}00339\ \ \ \ \ fetchSpots()\ //\ fetch\ immediately\ on\ mount}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00340}00340\ \ \ \ \ const\ interval\ =\ setInterval(fetchSpots,\ 1000)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00341}00341\ \ \ \ \ return\ ()\ =>\ clearInterval(interval)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00342}00342\ \ \ \},\ [])}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00343}00343\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00344}00344\ \ \ return\ (}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00345}00345\ \ \ \ \ <MapContainer}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00346}00346\ \ \ \ \ \ \ center=\{[32.72591944383129,\ -\/97.11268490981709]\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00347}00347\ \ \ \ \ \ \ zoom=\{20\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00348}00348\ \ \ \ \ \ \ minZoom=\{18\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00349}00349\ \ \ \ \ \ \ maxZoom=\{22\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00350}00350\ \ \ \ \ \ \ rotate=\{true\}\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00351}00351\ \ \ \ \ \ \ bearing=\{rotation\}\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00352}00352\ \ \ \ \ \ \ style=\{\{\ height:\ "{}100vh"{},\ width:\ "{}100\%"{}\ \}\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00353}00353\ \ \ \ \ \ \ whenReady=\{()\ =>\ setMapReady(true)\}\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00354}00354\ \ \ \ \ >}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00355}00355\ \ \ \ \ \ \ <TileLayer}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00356}00356\ \ \ \ \ \ \ \ \ url="{}/tiles10/\{z\}/\{x\}/\{y\}.png"{}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00357}00357\ \ \ \ \ \ \ \ \ minZoom=\{18\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00358}00358\ \ \ \ \ \ \ \ \ maxZoom=\{22\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00359}00359\ \ \ \ \ \ \ \ \ maxNativeZoom=\{22\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00360}00360\ \ \ \ \ \ \ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00361}00361\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00362}00362\ \ \ \ \ <RotateMap\ bearing=\{rotation\}\ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00363}00363\ \ \ \ \ <FollowMarker\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00364}00364\ \ \ \ \ \ \ position=\{livePoint\}\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00365}00365\ \ \ \ \ \ \ following=\{following\}\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00366}00366\ \ \ \ \ \ \ shouldRecenter=\{recenter\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00367}00367\ \ \ \ \ \ \ onRecentered=\{()\ =>\ setRecenter(false)\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00368}00368\ \ \ \ \ \ \ mapReady=\{mapReady\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00369}00369\ \ \ \ \ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00370}00370\ \ \ \ \ <StopFollowingOnInteract\ setFollowing=\{setFollowing\}\ following=\{following\}\ recenter=\{recenter\}\ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00371}00371\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00372}00372\ \ \ \ \ \ \ \{/*\ Re-\/center\ button\ */\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00373}00373\ \ \ \ \ \ \ <div\ className="{}leaflet-\/top\ leaflet-\/left"{}\ style=\{\{\ marginTop:\ '80px'\ \}\}>}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00374}00374\ \ \ \ \ \ \ \ \ <div\ className="{}leaflet-\/bar\ leaflet-\/control"{}>}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00375}00375\ \ \ \ \ \ \ \ \ \ \ <a}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00376}00376\ \ \ \ \ \ \ \ \ \ \ \ \ href="{}\#"{}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00377}00377\ \ \ \ \ \ \ \ \ \ \ \ \ title="{}Follow\ marker"{}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00378}00378\ \ \ \ \ \ \ \ \ \ \ \ \ role="{}button"{}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00379}00379\ \ \ \ \ \ \ \ \ \ \ \ \ onClick=\{(e)\ =>\ \{\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00380}00380\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ e.preventDefault()}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00381}00381\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ setFollowing(true)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00382}00382\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ setRecenter(true)}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00383}00383\ \ \ \ \ \ \ \ \ \ \ \ \ \}\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00384}00384\ \ \ \ \ \ \ \ \ \ \ \ \ style=\{\{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00385}00385\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ display:\ 'flex',}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00386}00386\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ alignItems:\ 'center',}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00387}00387\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ justifyContent:\ 'center',}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00388}00388\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ width:\ '30px',}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00389}00389\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ height:\ '30px',}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00390}00390\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fontSize:\ '18px',}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00391}00391\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ textDecoration:\ 'none',}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00392}00392\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ color:\ following\ ?\ '\#0078ff'\ :\ '\#333',}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00393}00393\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ backgroundColor:\ 'gray',}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00394}00394\ \ \ \ \ \ \ \ \ \ \ \ \ \}\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00395}00395\ \ \ \ \ \ \ \ \ \ \ >}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00396}00396\ \ \ \ \ \ \ \ \ \ \ \ \ <img}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00397}00397\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ src=\{markerIcon\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00398}00398\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ alt="{}marker"{}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00399}00399\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ style=\{\{}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00400}00400\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ width:\ '20px',}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00401}00401\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ height:\ '32px',}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00402}00402\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ objectFit:\ 'contain'}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00403}00403\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00404}00404\ \ \ \ \ \ \ \ \ \ \ \ \ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00405}00405\ \ \ \ \ \ \ \ \ \ \ </a>}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00406}00406\ \ \ \ \ \ \ \ \ </div>}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00407}00407\ \ \ \ \ \ \ </div>}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00408}00408\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00409}00409\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00410}00410\ \ \ \ \ \ \ \{livePoint\ \&\&\ (}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00411}00411\ \ \ \ \ \ \ \ \ <>}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00412}00412\ \ \ \ \ \ \ \ \ \ \ <Marker\ position=\{livePoint\}>}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00413}00413\ \ \ \ \ \ \ \ \ \ \ </Marker>}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00414}00414\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00415}00415\ \ \ \ \ \ \ \ \ \ \ <DrawRectanglesLeft\ spotStates=\{leftSide\}\ markerPosition=\{livePoint\}\ rotation=\{rotation\}\ />}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00416}00416\ \ \ \ \ \ \ \ \ \ \ <DrawRectanglesRight\ spotStates=\{rightSide\}\ markerPosition=\{livePoint\}\ rotation=\{rotation\}/>}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00417}00417\ \ \ \ \ \ \ \ \ </>}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00418}00418\ \ \ \ \ \ \ )\}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00419}00419\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00420}00420\ \ \ \ \ </MapContainer>}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00421}00421\ \ \ )}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00422}00422\ \}}
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00423}00423\ }
+\DoxyCodeLine{\Hypertarget{_map_view_8jsx_source_l00424}00424\ export\ default\ MapView}
+
+\end{DoxyCode}

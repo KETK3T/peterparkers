@@ -1,0 +1,53 @@
+\doxysection{gps-\/sensor-\/data.py}
+\hypertarget{gps-sensor-data_8py_source}{}\label{gps-sensor-data_8py_source}\index{src/imu-\/gps/gps-\/sensor-\/data.py@{src/imu-\/gps/gps-\/sensor-\/data.py}}
+\doxymbox{\hyperlink{gps-sensor-data_8py}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00023}00023\ }
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00024}00024\ \textcolor{comment}{\#\ pip\ install\ pyserial}}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00025}00025\ }
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00026}00026\ \textcolor{keyword}{import}\ serial}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00027}00027\ \textcolor{keyword}{import}\ time}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00028}00028\ \textcolor{keyword}{import}\ pynmea2}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00029}00029\ }
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00030}00030\ }
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00035}00035\ ser\ =\ serial.Serial(}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00036}00036\ \ \ \ \ port=\textcolor{stringliteral}{'/dev/ttyTHS1'},\ \ \textcolor{comment}{\#\ Adjust\ this\ for\ your\ specific\ setup}}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00037}00037\ \ \ \ \ baudrate=9600,}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00038}00038\ \ \ \ \ parity=serial.PARITY\_NONE,}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00039}00039\ \ \ \ \ stopbits=serial.STOPBITS\_ONE,}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00040}00040\ \ \ \ \ bytesize=serial.EIGHTBITS,}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00041}00041\ \ \ \ \ timeout=1\ \ \textcolor{comment}{\#\ Timeout\ in\ seconds}}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00042}00042\ )}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00043}00043\ }
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00044}00044\ print(\textcolor{stringliteral}{"{}Serial\ port\ opened.\ Waiting\ for\ data..."{}})}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00045}00045\ }
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00046}00046\ }
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00047}00047\ \textcolor{keywordflow}{try}:}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00048}00048\ \ \ \ \ \textcolor{keywordflow}{while}\ \textcolor{keyword}{True}:}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00049}00049\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ser.in\_waiting\ >\ 0:}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00050}00050\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Read\ data\ from\ the\ serial\ port}}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00051}00051\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ ser.readline()\ reads\ until\ a\ newline\ character\ is\ encountered}}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00052}00052\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ ser.read(num\_bytes)\ reads\ a\ specified\ number\ of\ bytes}}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00053}00053\ \ \ \ \ \ \ \ \ \ \ \ \ data\ =\ ser.readline().decode().strip()\ \textcolor{comment}{\#\ Decode\ and\ remove\ whitespace}}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00054}00054\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#'utf-\/8'}}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00055}00055\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ data:}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00056}00056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ data.find(\textcolor{stringliteral}{'GGA'})\ >\ 0:}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00057}00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}:}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00058}00058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ msg\ =\ pynmea2.parse(data)}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00059}00059\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ print(msg.timestamp,\textcolor{stringliteral}{'Lat:'},round(msg.latitude,6),\textcolor{stringliteral}{'Lon:'},round(msg.longitude,6),\textcolor{stringliteral}{'Alt:'},msg.altitude,\textcolor{stringliteral}{'Sats:'},msg.num\_sats)}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00060}00060\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#print(f"{}Received:\ \{data\}"{})}}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00061}00061\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{except}\ Exception\ \textcolor{keyword}{as}\ e:}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00062}00062\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ print(e)}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00063}00063\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00064}00064\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}:}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00065}00065\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ print(\textcolor{stringliteral}{"{}No\ data\ recieved"{}})}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00066}00066\ \ \ \ \ \ \ \ \ time.sleep(0.1)\ \textcolor{comment}{\#\ Small\ delay\ to\ prevent\ busy-\/waiting}}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00067}00067\ }
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00068}00068\ \textcolor{keywordflow}{except}\ Exception\ \textcolor{keyword}{as}\ e:}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00069}00069\ \ \ \ \ print(f\textcolor{stringliteral}{"{}An\ error\ occurred:\ \{e\}"{}})}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00070}00070\ \textcolor{keywordflow}{finally}:}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00071}00071\ \ \ \ \ ser.close()}
+\DoxyCodeLine{\Hypertarget{gps-sensor-data_8py_source_l00072}00072\ \ \ \ \ print(\textcolor{stringliteral}{"{}Serial\ port\ closed."{}})}
+
+\end{DoxyCode}

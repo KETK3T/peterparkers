@@ -1,3 +1,8 @@
+##  @file gps.py
+#   @breif Threaded GPS module reader that continuosly parse NMEA sentences in the background
+# 
+
+
 import serial
 import time
 import pynmea2

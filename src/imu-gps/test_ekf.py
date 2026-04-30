@@ -1,3 +1,9 @@
+## @file ekf.py
+#  @brief Extended Kalman Filter for 2D vehicle localisation fusing IMU and GPS.
+#
+#  State vector: [x, y, v, ψ] — position (m), forward speed (m/s), yaw (rad).
+#  Inputs: forward acceleration (m/s²) and yaw rate (rad/s) from IMU.
+#  Updates: GPS position (x, y) and tilt-compensated magnetometer yaw.
 import numpy as np
 
 class EKF:

@@ -1,0 +1,103 @@
+\doxysection{gps.\+py}
+\hypertarget{gps_8py_source}{}\label{gps_8py_source}\index{src/imu-\/gps/gps.py@{src/imu-\/gps/gps.py}}
+\doxymbox{\hyperlink{gps_8py}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00004}00004\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00005}00005\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00006}00006\ \textcolor{keyword}{import}\ serial}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00007}00007\ \textcolor{keyword}{import}\ time}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00008}00008\ \textcolor{keyword}{import}\ pynmea2}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00009}00009\ \textcolor{keyword}{import}\ threading}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00010}00010\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00011}\doxymbox{\hyperlink{classgps_1_1_g_p_s}{00011}}\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{classgps_1_1_g_p_s}{GPS}}:}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00012}00012\ \ \ \ \ \textcolor{keyword}{def\ }\_\_init\_\_(self):}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00013}00013\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a4e01b83d31485df56dd2ed91dd67a851}{ser}}\ =\ serial.Serial(}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00014}00014\ \ \ \ \ \ \ \ \ \ \ \ \ port=\textcolor{stringliteral}{'/dev/ttyTHS1'},\ \ \textcolor{comment}{\#\ Adjust\ this\ for\ your\ specific\ setup}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00015}00015\ \ \ \ \ \ \ \ \ \ \ \ \ baudrate=9600,}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00016}00016\ \ \ \ \ \ \ \ \ \ \ \ \ parity=serial.PARITY\_NONE,}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00017}00017\ \ \ \ \ \ \ \ \ \ \ \ \ stopbits=serial.STOPBITS\_ONE,}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00018}00018\ \ \ \ \ \ \ \ \ \ \ \ \ bytesize=serial.EIGHTBITS,}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00019}00019\ \ \ \ \ \ \ \ \ \ \ \ \ timeout=1\ \ \textcolor{comment}{\#\ Timeout\ in\ seconds}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00020}00020\ \ \ \ \ \ \ \ \ )}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00021}00021\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00022}00022\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#self.rate\ =\ rate\_hz\ \#\ rate\_hz=5\ in\ init\ header}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00023}00023\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a646766680338b7c2b31a385d515f94ad}{running}}\ =\ \textcolor{keyword}{True}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00024}00024\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00025}00025\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_ac6c8c23c7b6f25bbcf57cd9e4e4ca697}{latitude}}\ =\ 0}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00026}00026\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a02757db5003519d2ec1a87a62d44c3c0}{longitude}}\ =\ 0}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00027}00027\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_ad5fd8824f1cbcaa9f7990ffeb399e96c}{altitude}}\ =\ 0\ \textcolor{comment}{\#sometimes\ returns\ None}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00028}00028\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00029}00029\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ new\ data\ flag}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00030}00030\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_ad12a19dd5ada415f13bdef1860622461}{new\_data}}\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00031}00031\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00032}00032\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ start\ background\ thread}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00033}00033\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a2373cb3cf1686d60a18a152c16600393}{thread}}\ =\ threading.Thread(target=self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_af96bf574bfe74a3c66becb7cf47d3402}{update\_loop}},\ daemon=\textcolor{keyword}{True})}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00034}00034\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a2373cb3cf1686d60a18a152c16600393}{thread}}.start()}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00035}00035\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00036}00036\ \ \ \ \ \textcolor{keyword}{def\ }\_\_str\_\_(self):}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00037}00037\ \ \ \ \ \ \ \ \ \textcolor{keyword}{def\ }\_fmt(v):}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00038}00038\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ f\textcolor{stringliteral}{"{}\{v:.3f\}"{}}\ \textcolor{keywordflow}{if}\ isinstance(v,\ (int,\ float))\ \textcolor{keywordflow}{else}\ \textcolor{stringliteral}{"{}N/A"{}}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00039}00039\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00040}00040\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00041}00041\ \ \ \ \ \ \ \ \ \ \ \ \ f\textcolor{stringliteral}{"{}Latitude:\ \{\_fmt(self.latitude)\}\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00042}00042\ \ \ \ \ \ \ \ \ \ \ \ \ f\textcolor{stringliteral}{"{}Longitude:\ \{\_fmt(self.longitude)\}\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00043}00043\ \ \ \ \ \ \ \ \ \ \ \ \ f\textcolor{stringliteral}{"{}Altitude:\ \{\_fmt(self.altitude)\}\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00044}00044\ \ \ \ \ \ \ \ \ )}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00045}00045\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00046}00046\ \ \ \ \ \textcolor{keyword}{def\ }update\_loop(self):}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00047}00047\ \ \ \ \ \ \ \ \ print(\textcolor{stringliteral}{"{}Serial\ port\ opened.\ Waiting\ for\ data..."{}})}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00048}00048\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#period\ =\ 1\ /\ self.rate}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00049}00049\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}:}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00050}00050\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a646766680338b7c2b31a385d515f94ad}{running}}:}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00051}00051\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a4e01b83d31485df56dd2ed91dd67a851}{ser}}.in\_waiting\ >\ 0:}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00052}00052\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Read\ data\ from\ the\ serial\ port}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00053}00053\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ ser.readline()\ reads\ until\ a\ newline\ character\ is\ encountered}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00054}00054\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ ser.read(num\_bytes)\ reads\ a\ specified\ number\ of\ bytes}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00055}00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ data\ =\ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a4e01b83d31485df56dd2ed91dd67a851}{ser}}.readline().decode().strip()\ \ \textcolor{comment}{\#\ Decode\ and\ remove\ whitespace}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00056}00056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ 'utf-\/8'}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00057}00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ data:}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00058}00058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ data.find(\textcolor{stringliteral}{'GGA'})\ >\ 0:}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00059}00059\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}:}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00060}00060\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ msg\ =\ pynmea2.parse(data)}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00061}00061\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{'''}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00062}00062\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ print(msg.timestamp,\ 'Lat:',\ round(msg.latitude,\ 6),\ 'Lon:',\ round(msg.longitude,\ 6),}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00063}00063\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 'Alt:',\ msg.altitude,\ 'Sats:',\ msg.num\_sats)}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00064}00064\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ '''}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00065}00065\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ print(f"{}Received:\ \{data\}"{})}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00066}00066\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00067}00067\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_ac6c8c23c7b6f25bbcf57cd9e4e4ca697}{latitude}}\ =\ msg.latitude}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00068}00068\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a02757db5003519d2ec1a87a62d44c3c0}{longitude}}\ =\ msg.longitude}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00069}00069\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_ad5fd8824f1cbcaa9f7990ffeb399e96c}{altitude}}\ =\ msg.altitude}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00070}00070\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_ad12a19dd5ada415f13bdef1860622461}{new\_data}}\ =\ \textcolor{keyword}{True}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00071}00071\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00072}00072\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{except}\ Exception\ \textcolor{keyword}{as}\ e:}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00073}00073\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ print(e)}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00074}00074\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00075}00075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}:}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00076}00076\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ print(\textcolor{stringliteral}{"{}No\ data\ recieved"{}})}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00077}00077\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#time.sleep(period)\ \ \#\ Small\ delay\ to\ prevent\ busy-\/waiting}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00078}00078\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00079}00079\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{except}\ Exception\ \textcolor{keyword}{as}\ e:}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00080}00080\ \ \ \ \ \ \ \ \ \ \ \ \ print(f\textcolor{stringliteral}{"{}An\ error\ occurred:\ \{e\}"{}})}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00081}00081\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00082}00082\ \ \ \ \ \textcolor{keyword}{def\ }get\_lat(self):}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00083}00083\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_ac6c8c23c7b6f25bbcf57cd9e4e4ca697}{latitude}}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00084}00084\ \ \ \ \ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00085}00085\ \ \ \ \ \textcolor{keyword}{def\ }get\_long(self):}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00086}00086\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a02757db5003519d2ec1a87a62d44c3c0}{longitude}}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00087}00087\ \ \ \ \ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00088}00088\ \ \ \ \ \textcolor{keyword}{def\ }get\_altitude(self):}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00089}00089\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_ad5fd8824f1cbcaa9f7990ffeb399e96c}{altitude}}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00090}00090\ \ \ \ \ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00091}00091\ \ \ \ \ \textcolor{keyword}{def\ }stop(self):}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00092}00092\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a646766680338b7c2b31a385d515f94ad}{running}}\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00093}00093\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a4e01b83d31485df56dd2ed91dd67a851}{ser}}.close()}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00094}00094\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a2373cb3cf1686d60a18a152c16600393}{thread}}.join()}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00095}00095\ }
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00096}00096\ \ \ \ \ \textcolor{keyword}{def\ }get\_data(self):}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00097}00097\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_ad12a19dd5ada415f13bdef1860622461}{new\_data}}\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00098}00098\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_ac6c8c23c7b6f25bbcf57cd9e4e4ca697}{latitude}},\ self.\doxymbox{\hyperlink{classgps_1_1_g_p_s_a02757db5003519d2ec1a87a62d44c3c0}{longitude}}}
+\DoxyCodeLine{\Hypertarget{gps_8py_source_l00099}00099\ }
+
+\end{DoxyCode}

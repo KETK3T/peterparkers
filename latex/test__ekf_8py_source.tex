@@ -1,0 +1,123 @@
+\doxysection{test\+\_\+ekf.\+py}
+\hypertarget{test__ekf_8py_source}{}\label{test__ekf_8py_source}\index{src/imu-\/gps/test\_ekf.py@{src/imu-\/gps/test\_ekf.py}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00007}00007\ \textcolor{keyword}{import}\ numpy\ \textcolor{keyword}{as}\ np}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00008}00008\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00009}\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f}{00009}}\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f}{EKF}}:}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00010}00010\ \ \ \ \ \textcolor{keyword}{def\ }\_\_init\_\_(self):}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00011}00011\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a732489599787fe7f4ac03fa662f47508}{dt}}\ =\ 0}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00012}00012\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}"{}"{}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00013}00013\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Define\ state\ vector\ [x,\ y,\ v,\ psi]}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00014}00014\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ [x-\/position,\ y-\/position,\ speed\ (scalar),\ yaw\ (heading)]}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00015}00015\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Speed\ used\ instead\ of\ velocity\ since\ it\ can\ be\ assumed\ that\ a\ car\ will\ be\ traveling\ in\ the\ forward\ or\ backward\ direction\ in\ relation\ to\ its}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00016}00016\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ orientation.\ For\ example,\ a\ car\ is\ not\ going\ to\ travel\ sideways.}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00017}00017\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ "{}"{}"{}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00018}00018\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a07e18023e2ffd60dfec1457b28459772}{x}}\ =\ np.zeros((4,\ 1))}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00019}00019\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00020}00020\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}"{}"{}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00021}00021\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ State\ covariance\ P\ matrix}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00022}00022\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ How\ uncertain\ the\ filter\ is\ about\ each\ part\ of\ the\ state}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00023}00023\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Diagonals\ contain\ covariances\ of\ each\ measurement,\ off-\/diagonals\ show\ uncertainty\ in\ correlation\ between\ measurements}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00024}00024\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ So\ for\ example,\ if\ speed\ is\ wrong,\ then\ position\ is\ probably\ wrong\ as\ well.}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00025}00025\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Small\ values\ in\ P\ mean\ the\ filter\ is\ more\ confident,\ large\ values\ in\ P\ mean\ more\ uncertainty}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00026}00026\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ "{}"{}"{}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00027}00027\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a3406f15907138d7c682f043d58ab377c}{P}}\ =\ np.diag([10,\ 10,\ 1,\ 0.1])}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00028}00028\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00029}00029\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}"{}"{}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00030}00030\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Process\ noise\ Q\ matrix}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00031}00031\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Represents\ uncertainty\ in\ the\ model}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00032}00032\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Increase\ if\ motion\ is\ unpredictable\ or\ filter\ is\ too\ "{}confident"{}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00033}00033\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Slow/unresponsive\ filter?\ Increase\ Q\ values}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00034}00034\ \textcolor{stringliteral}{}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00035}00035\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ This\ Q\ matrix\ controls\ acceleration\ and\ yaw\ rate}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00036}00036\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ "{}"{}"{}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00037}00037\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_ad5ee30b67da60f378c190c2827353b26}{Q}}\ =\ np.diag([1.0,\ 0.05])}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00038}00038\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00039}00039\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}"{}"{}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00040}00040\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Measurement\ noise\ R\ matrix}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00041}00041\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Based\ on\ sensor\ specs,\ increase\ if\ measurements\ are\ noisy}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00042}00042\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Noisy\ output?\ Increase\ R\ values}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00043}00043\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ "{}"{}"{}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00044}00044\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a34bc7950ead1f75a149892a2a5621bad}{R\_gps}}\ =\ np.diag([25,\ 25])\ \ \textcolor{comment}{\#\ GPS\ variance,\ 5m\ std\ dev}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00045}00045\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a0cdbc8d0f73a78b593c3a594fb1afcd8}{R\_yaw}}\ =\ np.array([[0.05]])\ \ \ \ \ \textcolor{comment}{\#\ magenetometer\ variance\ (from\ IMU)}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00046}00046\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00047}00047\ \ \ \ \ \textcolor{keyword}{def\ }predict(self,\ u,\ dt):}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00048}00048\ \ \ \ \ \ \ \ \ a,\ omega\ =\ u.flatten()}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00049}00049\ \ \ \ \ \ \ \ \ x,\ y,\ v,\ psi\ =\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a07e18023e2ffd60dfec1457b28459772}{x}}.flatten()}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00050}00050\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00051}00051\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Nonlinear\ motion\ model:\ velocity\ +\ heading}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00052}00052\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ x\_pred\ =\ x\_prev\ +\ v\_prev\ *\ cos(psi\_prev)\ *\ dt}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00053}00053\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ y\_pred\ =\ y\_prev\ +\ v\_prev\ *\ sin(psi\_prev)\ *\ dt}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00054}00054\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ v\_pred\ =\ v\_prev\ +\ a\ *\ dt}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00055}00055\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ psi\_pred\ =\ psi\_prev\ +\ omega\ *\ dt}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00056}00056\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ where\ a\ is\ forward\ acceleration\ from\ IMU\ and\ omega\ is\ yaw\ rate\ from\ gyro\ (also\ on\ IMU)}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00057}00057\ \ \ \ \ \ \ \ \ x\_new\ =\ x\ +\ v\ *\ np.cos(psi)\ *\ dt}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00058}00058\ \ \ \ \ \ \ \ \ y\_new\ =\ y\ +\ v\ *\ np.sin(psi)\ *\ dt}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00059}00059\ \ \ \ \ \ \ \ \ v\_new\ =\ v\ +\ a\ *\ dt}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00060}00060\ \ \ \ \ \ \ \ \ psi\_new\ =\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a091c56b9ddd00b17a18c87445f952948}{normalize\_angle}}(psi\ +\ omega\ *\ dt)}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00061}00061\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00062}00062\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a07e18023e2ffd60dfec1457b28459772}{x}}\ =\ np.array([[x\_new],\ [y\_new],\ [v\_new],\ [psi\_new]])}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00063}00063\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00064}00064\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}"{}"{}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00065}00065\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Computing\ Jacobians}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00066}00066\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ State\ Transition\ Jacobian\ F\ captures\ how\ turning\ affects\ position}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00067}00067\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ Control\ Jacobian\ B\ captures\ how\ acceleration\ and\ yaw\ rate\ affect\ state}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00068}00068\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ "{}"{}"{}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00069}00069\ \ \ \ \ \ \ \ \ F\ =\ np.array([}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00070}00070\ \ \ \ \ \ \ \ \ \ \ \ \ [1,\ 0,\ np.cos(psi)\ *\ dt,\ -\/v\ *\ np.sin(psi)\ *\ dt],}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00071}00071\ \ \ \ \ \ \ \ \ \ \ \ \ [0,\ 1,\ np.sin(psi)\ *\ dt,\ v\ *\ np.cos(psi)\ *\ dt],}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00072}00072\ \ \ \ \ \ \ \ \ \ \ \ \ [0,\ 0,\ 1,\ 0],}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00073}00073\ \ \ \ \ \ \ \ \ \ \ \ \ [0,\ 0,\ 0,\ 1]}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00074}00074\ \ \ \ \ \ \ \ \ ])}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00075}00075\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00076}00076\ \ \ \ \ \ \ \ \ B\ =\ np.array([}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00077}00077\ \ \ \ \ \ \ \ \ \ \ \ \ [0,\ 0],}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00078}00078\ \ \ \ \ \ \ \ \ \ \ \ \ [0,\ 0],}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00079}00079\ \ \ \ \ \ \ \ \ \ \ \ \ [dt,\ 0],}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00080}00080\ \ \ \ \ \ \ \ \ \ \ \ \ [0,\ dt]}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00081}00081\ \ \ \ \ \ \ \ \ ])}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00082}00082\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00083}00083\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Predict\ state\ covariance}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00084}00084\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ P\_pred\ =\ F\ *\ P\ *\ F\string^T\ +\ B\ *\ Q\ *\ B\string^T}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00085}00085\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a3406f15907138d7c682f043d58ab377c}{P}}\ =\ F\ @\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a3406f15907138d7c682f043d58ab377c}{P}}\ @\ F.T\ +\ B\ @\ (self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_ad5ee30b67da60f378c190c2827353b26}{Q}}\ *\ dt)\ @\ B.T}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00086}00086\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00087}00087\ \ \ \ \ \textcolor{keyword}{def\ }update\_gps(self,\ z):}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00088}00088\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ z\ =\ [x\_meas,\ y\_meas]}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00089}00089\ \ \ \ \ \ \ \ \ H\ =\ np.array([}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00090}00090\ \ \ \ \ \ \ \ \ \ \ \ \ [1,\ 0,\ 0,\ 0],}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00091}00091\ \ \ \ \ \ \ \ \ \ \ \ \ [0,\ 1,\ 0,\ 0]}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00092}00092\ \ \ \ \ \ \ \ \ ])}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00093}00093\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00094}00094\ \ \ \ \ \ \ \ \ z\ =\ z.reshape((2,1))}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00095}00095\ \ \ \ \ \ \ \ \ y\ =\ z\ -\/\ H\ @\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a07e18023e2ffd60dfec1457b28459772}{x}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00096}00096\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00097}00097\ \ \ \ \ \ \ \ \ S\ =\ H\ @\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a3406f15907138d7c682f043d58ab377c}{P}}\ @\ H.T\ +\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a34bc7950ead1f75a149892a2a5621bad}{R\_gps}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00098}00098\ \ \ \ \ \ \ \ \ K\ =\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a3406f15907138d7c682f043d58ab377c}{P}}\ @\ H.T\ @\ np.linalg.inv(S)}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00099}00099\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00100}00100\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a07e18023e2ffd60dfec1457b28459772}{x}}\ =\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a07e18023e2ffd60dfec1457b28459772}{x}}\ +\ K\ @\ y}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00101}00101\ \ \ \ \ \ \ \ \ I\ =\ np.eye(4)}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00102}00102\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a3406f15907138d7c682f043d58ab377c}{P}}\ =\ (I\ -\/\ K\ @\ H)\ @\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a3406f15907138d7c682f043d58ab377c}{P}}\ @\ (I\ -\/\ K\ @\ H).T\ +\ K\ @\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a34bc7950ead1f75a149892a2a5621bad}{R\_gps}}\ @\ K.T}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00103}00103\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00104}00104\ \ \ \ \ \textcolor{keyword}{def\ }update\_yaw(self,\ yaw\_meas):}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00105}00105\ \ \ \ \ \ \ \ \ H\ =\ np.array([[0,\ 0,\ 0,\ 1]])}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00106}00106\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00107}00107\ \ \ \ \ \ \ \ \ z\ =\ np.array([[yaw\_meas]])}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00108}00108\ \ \ \ \ \ \ \ \ y\ =\ z\ -\/\ H\ @\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a07e18023e2ffd60dfec1457b28459772}{x}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00109}00109\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00110}00110\ \ \ \ \ \ \ \ \ y[0,0]\ =\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a091c56b9ddd00b17a18c87445f952948}{normalize\_angle}}(y[0,0])}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00111}00111\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00112}00112\ \ \ \ \ \ \ \ \ S\ =\ H\ @\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a3406f15907138d7c682f043d58ab377c}{P}}\ @\ H.T\ +\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a0cdbc8d0f73a78b593c3a594fb1afcd8}{R\_yaw}}}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00113}00113\ \ \ \ \ \ \ \ \ K\ =\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a3406f15907138d7c682f043d58ab377c}{P}}\ @\ H.T\ @\ np.linalg.inv(S)}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00114}00114\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00115}00115\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a07e18023e2ffd60dfec1457b28459772}{x}}\ =\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a07e18023e2ffd60dfec1457b28459772}{x}}\ +\ K\ @\ y}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00116}00116\ \ \ \ \ \ \ \ \ I\ =\ np.eye(4)}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00117}00117\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a3406f15907138d7c682f043d58ab377c}{P}}\ =\ (I\ -\/\ K\ @\ H)\ @\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a3406f15907138d7c682f043d58ab377c}{P}}\ @\ (I\ -\/\ K\ @\ H).T\ +\ K\ @\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a0cdbc8d0f73a78b593c3a594fb1afcd8}{R\_yaw}}\ @\ K.T}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00118}00118\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00119}00119\ \ \ \ \ \ \ \ \ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a07e18023e2ffd60dfec1457b28459772}{x}}[3,0]\ =\ self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a091c56b9ddd00b17a18c87445f952948}{normalize\_angle}}(self.\doxymbox{\hyperlink{classtest__ekf_1_1_e_k_f_a07e18023e2ffd60dfec1457b28459772}{x}}[3,0])}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00120}00120\ }
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00121}00121\ \ \ \ \ \textcolor{keyword}{def\ }normalize\_angle(self,\ angle):}
+\DoxyCodeLine{\Hypertarget{test__ekf_8py_source_l00122}00122\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (angle\ +\ np.pi)\ \%\ (2\ *\ np.pi)\ -\/\ np.pi}
+
+\end{DoxyCode}

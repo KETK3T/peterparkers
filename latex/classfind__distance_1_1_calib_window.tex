@@ -1,0 +1,400 @@
+\doxysection{find\+\_\+distance.\+Calib\+Window Class Reference}
+\hypertarget{classfind__distance_1_1_calib_window}{}\label{classfind__distance_1_1_calib_window}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+
+
+Live calibration window with Open\+CV trackbars for tuning CALIB\+\_\+\+PARAMS.  
+
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{classfind__distance_1_1_calib_window_a110039db30abc3f2c86d8118e518e1eb}{\+\_\+\+\_\+init\+\_\+\+\_\+}} (self)
+\item 
+\doxymbox{\hyperlink{classfind__distance_1_1_calib_window_a3451991458a4c8234652d5d86ca3ebc3}{toggle}} (self, str cam\+\_\+name)
+\item 
+\doxymbox{\hyperlink{classfind__distance_1_1_calib_window_ad7e8501e5c14b36aba972c2670606797}{tick}} (self)
+\item 
+\doxymbox{\hyperlink{classfind__distance_1_1_calib_window_aad68e039788c6879d512f13127690b6d}{close}} (self)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+bool \doxymbox{\hyperlink{classfind__distance_1_1_calib_window_afb15fc654ba9e8cb0555165a46a0f8df}{open}} = False
+\item 
+str \doxymbox{\hyperlink{classfind__distance_1_1_calib_window_a70d15d027c5d1cc5a4d03ce46af7d908}{active\+\_\+cam}} = \textquotesingle{}Right\textquotesingle{}
+\item 
+bool \doxymbox{\hyperlink{classfind__distance_1_1_calib_window_a60c502abfa9bdac95f6f89be5f8d763d}{suppress\+\_\+auto}} = False
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Static Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+str \doxymbox{\hyperlink{classfind__distance_1_1_calib_window_a9ca51c837ab83dcd32f1762d22d19c8f}{WIN}} = \textquotesingle{}Calibration\textquotesingle{}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{classfind__distance_1_1_calib_window_acea72beaebc34da759e4c514f4b95fc2}{\+\_\+cam\+\_\+idx}} (self)
+\item 
+\doxymbox{\hyperlink{classfind__distance_1_1_calib_window_ad641ec38c38158903a16e5e846e04232}{\+\_\+build}} (self)
+\item 
+dict \doxymbox{\hyperlink{classfind__distance_1_1_calib_window_a693a5bc1aa107c0067da53c7d3941bc9}{\+\_\+read}} (self)
+\item 
+\doxymbox{\hyperlink{classfind__distance_1_1_calib_window_a6be3a32eae1e358ec76ee94740e87a56}{\+\_\+on\+\_\+change}} (self)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+dict \doxymbox{\hyperlink{classfind__distance_1_1_calib_window_af01818d1c0f3fedbcf2f1c4072330c37}{\+\_\+last\+\_\+vals}} = \{\}
+\item 
+bool \doxymbox{\hyperlink{classfind__distance_1_1_calib_window_a96f60a1424413e575a7ddb78316c98e0}{\+\_\+pending\+\_\+update}} = False
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Live calibration window with Open\+CV trackbars for tuning CALIB\+\_\+\+PARAMS. 
+
+Opened and closed by pressing C in the display window. Each trackbar maps to one field in CALIB\+\_\+\+PARAMS for the currently active camera. Float parameters (fisheye\+\_\+distortion, perspective\+\_\+strength) are stored as integers scaled by 100 to work around Open\+CV\textquotesingle{}s integer-\/only trackbar API.
+
+On every slider change, \doxylink{classfind__distance_1_1_calib_window_ad7e8501e5c14b36aba972c2670606797}{tick()} reads all trackbar values, updates CALIB\+\_\+\+PARAMS, calls \doxylink{find__distance_8py_a4c18ee0a38e13c9ebfab1c0e34a7cef9}{detect\+\_\+spot\+\_\+boundaries()} on the latest camera snapshot, and then calls \doxylink{find__distance_8py_a78f134a7106f78eca236399f1ba1d74e}{generate\+\_\+rois()} to immediately rebuild and display the new ROIs — giving real-\/time visual feedback while tuning.
+
+suppress\+\_\+auto is set to True while the window is open to prevent the background auto-\/calibration thread from overwriting the manual adjustments.
+
+\begin{DoxyVerb}Separate OpenCV window with trackbars for live CALIB_PARAMS tuning.
+Opens when C is pressed, closes when C is pressed again.
+Automatically regenerates ROIs on any slider change.
+\end{DoxyVerb}
+ 
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01449}{1449}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+
+\label{doc-constructors}
+\Hypertarget{classfind__distance_1_1_calib_window_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classfind__distance_1_1_calib_window_a110039db30abc3f2c86d8118e518e1eb}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!\_\_init\_\_@{\_\_init\_\_}}
+\index{\_\_init\_\_@{\_\_init\_\_}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{\_\_init\_\_()}{\_\_init\_\_()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_a110039db30abc3f2c86d8118e518e1eb} 
+find\+\_\+distance.\+Calib\+Window.\+\_\+\+\_\+init\+\_\+\+\_\+ (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01457}{1457}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{01457\ \ \ \ \ \textcolor{keyword}{def\ }\_\_init\_\_(self):}
+\DoxyCodeLine{01458\ \ \ \ \ \ \ \ \ self.open\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{01459\ \ \ \ \ \ \ \ \ self.active\_cam\ =\ \textcolor{stringliteral}{'Right'}\ \ \textcolor{comment}{\#\ tracks\ which\ cam's\ params\ are\ shown}}
+\DoxyCodeLine{01460\ \ \ \ \ \ \ \ \ self.\_last\_vals\ =\ \{\}}
+\DoxyCodeLine{01461\ \ \ \ \ \ \ \ \ self.\_pending\_update\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{01462\ \ \ \ \ \ \ \ \ self.suppress\_auto\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{01463\ }
+
+\end{DoxyCode}
+
+
+\label{doc-func-members}
+\Hypertarget{classfind__distance_1_1_calib_window_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classfind__distance_1_1_calib_window_ad641ec38c38158903a16e5e846e04232}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!\_build@{\_build}}
+\index{\_build@{\_build}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{\_build()}{\_build()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_ad641ec38c38158903a16e5e846e04232} 
+find\+\_\+distance.\+Calib\+Window.\+\_\+build (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [protected]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01474}{1474}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{01474\ \ \ \ \ \textcolor{keyword}{def\ }\_build(self):}
+\DoxyCodeLine{01475\ \ \ \ \ \ \ \ \ p\ =\ CALIB\_PARAMS[self.active\_cam]}
+\DoxyCodeLine{01476\ \ \ \ \ \ \ \ \ cv2.namedWindow(self.WIN,\ cv2.WINDOW\_NORMAL)}
+\DoxyCodeLine{01477\ \ \ \ \ \ \ \ \ cv2.resizeWindow(self.WIN,\ 500,\ 280)}
+\DoxyCodeLine{01478\ }
+\DoxyCodeLine{01479\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Each\ trackbar:\ (name,\ min,\ max,\ initial)}}
+\DoxyCodeLine{01480\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Multiply\ floats\ by\ 100\ to\ use\ int\ trackbars}}
+\DoxyCodeLine{01481\ \ \ \ \ \ \ \ \ cv2.createTrackbar(\textcolor{stringliteral}{'VP\ X'},\ self.WIN,\ p[\textcolor{stringliteral}{'vanishing\_point'}][0],\ DISP\_W,\ \textcolor{keyword}{lambda}\ v:\ self.\_on\_change())}
+\DoxyCodeLine{01482\ \ \ \ \ \ \ \ \ cv2.createTrackbar(\textcolor{stringliteral}{'VP\ Y'},\ self.WIN,\ p[\textcolor{stringliteral}{'vanishing\_point'}][1],\ DISP\_H,\ \textcolor{keyword}{lambda}\ v:\ self.\_on\_change())}
+\DoxyCodeLine{01483\ \ \ \ \ \ \ \ \ cv2.createTrackbar(\textcolor{stringliteral}{'Near\ Y'},\ self.WIN,\ p[\textcolor{stringliteral}{'near\_y'}],\ DISP\_H,\ \textcolor{keyword}{lambda}\ v:\ self.\_on\_change())}
+\DoxyCodeLine{01484\ \ \ \ \ \ \ \ \ cv2.createTrackbar(\textcolor{stringliteral}{'Far\ Y'},\ self.WIN,\ p[\textcolor{stringliteral}{'far\_y'}],\ DISP\_H,\ \textcolor{keyword}{lambda}\ v:\ self.\_on\_change())}
+\DoxyCodeLine{01485\ \ \ \ \ \ \ \ \ cv2.createTrackbar(\textcolor{stringliteral}{'Left\ X'},\ self.WIN,\ p[\textcolor{stringliteral}{'left\_x'}],\ DISP\_W,\ \textcolor{keyword}{lambda}\ v:\ self.\_on\_change())}
+\DoxyCodeLine{01486\ \ \ \ \ \ \ \ \ cv2.createTrackbar(\textcolor{stringliteral}{'Right\ X'},\ self.WIN,\ p[\textcolor{stringliteral}{'right\_x'}],\ DISP\_W,\ \textcolor{keyword}{lambda}\ v:\ self.\_on\_change())}
+\DoxyCodeLine{01487\ \ \ \ \ \ \ \ \ cv2.createTrackbar(\textcolor{stringliteral}{'Spots'},\ self.WIN,\ p[\textcolor{stringliteral}{'n\_spots'}],\ 20,\ \textcolor{keyword}{lambda}\ v:\ self.\_on\_change())}
+\DoxyCodeLine{01488\ \ \ \ \ \ \ \ \ cv2.createTrackbar(\textcolor{stringliteral}{'Rows'},\ self.WIN,\ p[\textcolor{stringliteral}{'n\_rows'}],\ 6,\ \textcolor{keyword}{lambda}\ v:\ self.\_on\_change())}
+\DoxyCodeLine{01489\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ fisheye\_distortion:\ range\ -\/0.30\ to\ +0.30,\ stored\ as\ int\ -\/30..30\ (divide\ by\ 100)}}
+\DoxyCodeLine{01490\ \ \ \ \ \ \ \ \ fisheye\_int\ =\ int(p[\textcolor{stringliteral}{'fisheye\_distortion'}]\ *\ 100)\ +\ 30\ \ \textcolor{comment}{\#\ shift\ so\ 0\ maps\ to\ 30}}
+\DoxyCodeLine{01491\ \ \ \ \ \ \ \ \ cv2.createTrackbar(\textcolor{stringliteral}{'Fisheye\ x100'},\ self.WIN,\ fisheye\_int,\ 60,\ \textcolor{keyword}{lambda}\ v:\ self.\_on\_change())}
+\DoxyCodeLine{01492\ \ \ \ \ \ \ \ \ strength\_int\ =\ int(p.get(\textcolor{stringliteral}{'perspective\_strength'},\ 1.0)\ *\ 100)}
+\DoxyCodeLine{01493\ \ \ \ \ \ \ \ \ cv2.createTrackbar(\textcolor{stringliteral}{'Persp\ x100'},\ self.WIN,\ strength\_int,\ 100,\ \textcolor{keyword}{lambda}\ v:\ self.\_on\_change())}
+\DoxyCodeLine{01494\ \ \ \ \ \ \ \ \ cv2.createTrackbar(\textcolor{stringliteral}{'Min\ Height'},\ self.WIN,\ p.get(\textcolor{stringliteral}{'min\_roi\_height'},\ 60),\ DISP\_H,\ \textcolor{keyword}{lambda}\ v:\ self.\_on\_change())}
+\DoxyCodeLine{01495\ \ \ \ \ \ \ \ \ self.suppress\_auto\ =\ \textcolor{keyword}{True}}
+\DoxyCodeLine{01496\ \ \ \ \ \ \ \ \ self.open\ =\ \textcolor{keyword}{True}}
+\DoxyCodeLine{01497\ \ \ \ \ \ \ \ \ print(f\textcolor{stringliteral}{"{}[Calib]\ Window\ open\ for\ \{self.active\_cam\}.\ Drag\ sliders\ to\ tune,\ C\ to\ close."{}})}
+\DoxyCodeLine{01498\ }
+
+\end{DoxyCode}
+\Hypertarget{classfind__distance_1_1_calib_window_acea72beaebc34da759e4c514f4b95fc2}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!\_cam\_idx@{\_cam\_idx}}
+\index{\_cam\_idx@{\_cam\_idx}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{\_cam\_idx()}{\_cam\_idx()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_acea72beaebc34da759e4c514f4b95fc2} 
+find\+\_\+distance.\+Calib\+Window.\+\_\+cam\+\_\+idx (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [protected]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01464}{1464}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{01464\ \ \ \ \ \textcolor{keyword}{def\ }\_cam\_idx(self):}
+\DoxyCodeLine{01465\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ CAM\_ORDER.index(self.active\_cam)}
+\DoxyCodeLine{01466\ }
+
+\end{DoxyCode}
+\Hypertarget{classfind__distance_1_1_calib_window_a6be3a32eae1e358ec76ee94740e87a56}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!\_on\_change@{\_on\_change}}
+\index{\_on\_change@{\_on\_change}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{\_on\_change()}{\_on\_change()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_a6be3a32eae1e358ec76ee94740e87a56} 
+find\+\_\+distance.\+Calib\+Window.\+\_\+on\+\_\+change (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [protected]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01517}{1517}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{01517\ \ \ \ \ \textcolor{keyword}{def\ }\_on\_change(self):}
+\DoxyCodeLine{01518\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ self.open:}
+\DoxyCodeLine{01519\ \ \ \ \ \ \ \ \ \ \ \ \ self.\_pending\_update\ =\ \textcolor{keyword}{True}}
+\DoxyCodeLine{01520\ }
+
+\end{DoxyCode}
+\Hypertarget{classfind__distance_1_1_calib_window_a693a5bc1aa107c0067da53c7d3941bc9}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!\_read@{\_read}}
+\index{\_read@{\_read}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{\_read()}{\_read()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_a693a5bc1aa107c0067da53c7d3941bc9} 
+ dict find\+\_\+distance.\+Calib\+Window.\+\_\+read (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [protected]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01499}{1499}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{01499\ \ \ \ \ \textcolor{keyword}{def\ }\_read(self)\ -\/>\ dict:}
+\DoxyCodeLine{01500\ \ \ \ \ \ \ \ \ fisheye\_int\ =\ cv2.getTrackbarPos(\textcolor{stringliteral}{'Fisheye\ x100'},\ self.WIN)}
+\DoxyCodeLine{01501\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{}
+\DoxyCodeLine{01502\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{'vanishing\_point'}:\ (}
+\DoxyCodeLine{01503\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cv2.getTrackbarPos(\textcolor{stringliteral}{'VP\ X'},\ self.WIN),}
+\DoxyCodeLine{01504\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cv2.getTrackbarPos(\textcolor{stringliteral}{'VP\ Y'},\ self.WIN),}
+\DoxyCodeLine{01505\ \ \ \ \ \ \ \ \ \ \ \ \ ),}
+\DoxyCodeLine{01506\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{'near\_y'}:\ cv2.getTrackbarPos(\textcolor{stringliteral}{'Near\ Y'},\ self.WIN),}
+\DoxyCodeLine{01507\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{'far\_y'}:\ cv2.getTrackbarPos(\textcolor{stringliteral}{'Far\ Y'},\ self.WIN),}
+\DoxyCodeLine{01508\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{'left\_x'}:\ cv2.getTrackbarPos(\textcolor{stringliteral}{'Left\ X'},\ self.WIN),}
+\DoxyCodeLine{01509\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{'right\_x'}:\ cv2.getTrackbarPos(\textcolor{stringliteral}{'Right\ X'},\ self.WIN),}
+\DoxyCodeLine{01510\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{'n\_spots'}:\ max(1,\ cv2.getTrackbarPos(\textcolor{stringliteral}{'Spots'},\ self.WIN)),}
+\DoxyCodeLine{01511\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{'n\_rows'}:\ max(1,\ cv2.getTrackbarPos(\textcolor{stringliteral}{'Rows'},\ self.WIN)),}
+\DoxyCodeLine{01512\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{'fisheye\_distortion'}:\ (fisheye\_int\ -\/\ 30)\ /\ 100.0,}
+\DoxyCodeLine{01513\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{'perspective\_strength'}:\ cv2.getTrackbarPos(\textcolor{stringliteral}{'Persp\ x100'},\ self.WIN)\ /\ 100.0,}
+\DoxyCodeLine{01514\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{'min\_roi\_height'}:\ max(20,\ cv2.getTrackbarPos(\textcolor{stringliteral}{'Min\ Height'},\ self.WIN)),}
+\DoxyCodeLine{01515\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01516\ }
+
+\end{DoxyCode}
+Here is the caller graph for this function:\+
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classfind__distance_1_1_calib_window_a693a5bc1aa107c0067da53c7d3941bc9_icgraph}
+\end{center}
+\end{figure}
+\Hypertarget{classfind__distance_1_1_calib_window_aad68e039788c6879d512f13127690b6d}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!close@{close}}
+\index{close@{close}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{close()}{close()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_aad68e039788c6879d512f13127690b6d} 
+find\+\_\+distance.\+Calib\+Window.\+close (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01567}{1567}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{01567\ \ \ \ \ \textcolor{keyword}{def\ }close(self):}
+\DoxyCodeLine{01568\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ self.open:}
+\DoxyCodeLine{01569\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}:}
+\DoxyCodeLine{01570\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cv2.destroyWindow(self.WIN)}
+\DoxyCodeLine{01571\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{except}\ Exception:}
+\DoxyCodeLine{01572\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{pass}}
+\DoxyCodeLine{01573\ \ \ \ \ \ \ \ \ \ \ \ \ self.open\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{01574\ \ \ \ \ \ \ \ \ \ \ \ \ self.suppress\_auto\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{01575\ \ \ \ \ \ \ \ \ \ \ \ \ print(f\textcolor{stringliteral}{"{}[Calib]\ Window\ closed.\ Final\ params\ for\ \{self.active\_cam\}:"{}})}
+\DoxyCodeLine{01576\ \ \ \ \ \ \ \ \ \ \ \ \ print(f\textcolor{stringliteral}{"{}\ \ CALIB\_PARAMS['\{self.active\_cam\}']\ =\ \{CALIB\_PARAMS[self.active\_cam]\}"{}})}
+\DoxyCodeLine{01577\ }
+\DoxyCodeLine{01578\ }
+
+\end{DoxyCode}
+\Hypertarget{classfind__distance_1_1_calib_window_ad7e8501e5c14b36aba972c2670606797}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!tick@{tick}}
+\index{tick@{tick}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{tick()}{tick()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_ad7e8501e5c14b36aba972c2670606797} 
+find\+\_\+distance.\+Calib\+Window.\+tick (\begin{DoxyParamCaption}\item[{}]{self}{}\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}Call once per display loop iteration to keep the window alive.\end{DoxyVerb}
+ 
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01521}{1521}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{01521\ \ \ \ \ \textcolor{keyword}{def\ }tick(self):}
+\DoxyCodeLine{01522\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}"{}"{}Call\ once\ per\ display\ loop\ iteration\ to\ keep\ the\ window\ alive."{}"{}"{}}}
+\DoxyCodeLine{01523\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keywordflow}{not}\ self.open:}
+\DoxyCodeLine{01524\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}}
+\DoxyCodeLine{01525\ }
+\DoxyCodeLine{01526\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keywordflow}{not}\ self.\_pending\_update:}
+\DoxyCodeLine{01527\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}}
+\DoxyCodeLine{01528\ \ \ \ \ \ \ \ \ self.\_pending\_update\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{01529\ }
+\DoxyCodeLine{01530\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}:}
+\DoxyCodeLine{01531\ \ \ \ \ \ \ \ \ \ \ \ \ params\ =\ self.\_read()}
+\DoxyCodeLine{01532\ \ \ \ \ \ \ \ \ \ \ \ \ near\_y\ =\ params[\textcolor{stringliteral}{'near\_y'}]}
+\DoxyCodeLine{01533\ \ \ \ \ \ \ \ \ \ \ \ \ far\_y\ =\ params[\textcolor{stringliteral}{'far\_y'}]}
+\DoxyCodeLine{01534\ \ \ \ \ \ \ \ \ \ \ \ \ vpy\ =\ params[\textcolor{stringliteral}{'vanishing\_point'}][1]}
+\DoxyCodeLine{01535\ }
+\DoxyCodeLine{01536\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ near\_y\ ==\ far\_y\ \textcolor{keywordflow}{or}\ vpy\ >=\ near\_y:}
+\DoxyCodeLine{01537\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}}
+\DoxyCodeLine{01538\ }
+\DoxyCodeLine{01539\ \ \ \ \ \ \ \ \ \ \ \ \ CALIB\_PARAMS[self.active\_cam]\ =\ params}
+\DoxyCodeLine{01540\ }
+\DoxyCodeLine{01541\ \ \ \ \ \ \ \ \ \ \ \ \ cam\_idx\ =\ CAM\_ORDER.index(self.active\_cam)}
+\DoxyCodeLine{01542\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{with}\ RAW\_LOCKS[cam\_idx]:}
+\DoxyCodeLine{01543\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ snap\ =\ RAW\_BUFS[cam\_idx].copy()}
+\DoxyCodeLine{01544\ \ \ \ \ \ \ \ \ \ \ \ \ snap\_disp\ =\ cv2.resize(snap,\ (DISP\_W,\ DISP\_H),\ interpolation=cv2.INTER\_NEAREST)}
+\DoxyCodeLine{01545\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{with}\ store\_lock:}
+\DoxyCodeLine{01546\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ boxes\ =\ \_last\_boxes.get(self.active\_cam,\ [])}
+\DoxyCodeLine{01547\ \ \ \ \ \ \ \ \ \ \ \ \ boundaries,\ detected\_n\ =\ detect\_spot\_boundaries(}
+\DoxyCodeLine{01548\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ snap\_disp,\ near\_y,\ far\_y,}
+\DoxyCodeLine{01549\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ params[\textcolor{stringliteral}{'left\_x'}],\ params[\textcolor{stringliteral}{'right\_x'}],\ params[\textcolor{stringliteral}{'n\_spots'}],}
+\DoxyCodeLine{01550\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ detections=boxes,\ cam\_name=self.active\_cam}
+\DoxyCodeLine{01551\ \ \ \ \ \ \ \ \ \ \ \ \ )}
+\DoxyCodeLine{01552\ \ \ \ \ \ \ \ \ \ \ \ \ roi\_params\ =\ \{k:\ v\ \textcolor{keywordflow}{for}\ k,\ v\ \textcolor{keywordflow}{in}\ params.items()\ \textcolor{keywordflow}{if}\ k\ \textcolor{keywordflow}{not}\ \textcolor{keywordflow}{in}\ (\textcolor{stringliteral}{'min\_roi\_height'},)\}}
+\DoxyCodeLine{01553\ \ \ \ \ \ \ \ \ \ \ \ \ new\_rois\ =\ generate\_rois(}
+\DoxyCodeLine{01554\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cam\_id=self.active\_cam,}
+\DoxyCodeLine{01555\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ n\_spots=detected\_n,}
+\DoxyCodeLine{01556\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ spot\_boundaries=boundaries,}
+\DoxyCodeLine{01557\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ **\{k:\ v\ \textcolor{keywordflow}{for}\ k,\ v\ \textcolor{keywordflow}{in}\ roi\_params.items()\ \textcolor{keywordflow}{if}\ k\ !=\ \textcolor{stringliteral}{'n\_spots'}\},}
+\DoxyCodeLine{01558\ \ \ \ \ \ \ \ \ \ \ \ \ )}
+\DoxyCodeLine{01559\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ new\_rois:}
+\DoxyCodeLine{01560\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ rebuild\_spot\_masks(self.active\_cam,\ new\_rois)}
+\DoxyCodeLine{01561\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ n\ =\ params[\textcolor{stringliteral}{'n\_spots'}]}
+\DoxyCodeLine{01562\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ manual\ =\ [params[\textcolor{stringliteral}{'left\_x'}]\ +\ (params[\textcolor{stringliteral}{'right\_x'}]\ -\/\ params[\textcolor{stringliteral}{'left\_x'}])\ *\ i\ /\ n\ \textcolor{keywordflow}{for}\ i\ \textcolor{keywordflow}{in}\ range(n\ +\ 1)]}
+\DoxyCodeLine{01563\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \_manual\_bounds[self.active\_cam]\ =\ manual}
+\DoxyCodeLine{01564\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{except}\ Exception\ \textcolor{keyword}{as}\ e:}
+\DoxyCodeLine{01565\ \ \ \ \ \ \ \ \ \ \ \ \ print(f\textcolor{stringliteral}{"{}[Calib]\ tick\ error:\ \{e\}"{}})}
+\DoxyCodeLine{01566\ }
+
+\end{DoxyCode}
+Here is the call graph for this function:\+
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classfind__distance_1_1_calib_window_ad7e8501e5c14b36aba972c2670606797_cgraph}
+\end{center}
+\end{figure}
+\Hypertarget{classfind__distance_1_1_calib_window_a3451991458a4c8234652d5d86ca3ebc3}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!toggle@{toggle}}
+\index{toggle@{toggle}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{toggle()}{toggle()}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_a3451991458a4c8234652d5d86ca3ebc3} 
+find\+\_\+distance.\+Calib\+Window.\+toggle (\begin{DoxyParamCaption}\item[{}]{self}{, }\item[{str}]{cam\+\_\+name}{}\end{DoxyParamCaption})}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01467}{1467}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{01467\ \ \ \ \ \textcolor{keyword}{def\ }toggle(self,\ cam\_name:\ str):}
+\DoxyCodeLine{01468\ \ \ \ \ \ \ \ \ self.active\_cam\ =\ cam\_name}
+\DoxyCodeLine{01469\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ self.open:}
+\DoxyCodeLine{01470\ \ \ \ \ \ \ \ \ \ \ \ \ self.close()}
+\DoxyCodeLine{01471\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}:}
+\DoxyCodeLine{01472\ \ \ \ \ \ \ \ \ \ \ \ \ self.\_build()}
+\DoxyCodeLine{01473\ }
+
+\end{DoxyCode}
+
+
+\label{doc-variable-members}
+\Hypertarget{classfind__distance_1_1_calib_window_doc-variable-members}
+\doxysubsection{Member Data Documentation}
+\Hypertarget{classfind__distance_1_1_calib_window_af01818d1c0f3fedbcf2f1c4072330c37}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!\_last\_vals@{\_last\_vals}}
+\index{\_last\_vals@{\_last\_vals}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{\_last\_vals}{\_last\_vals}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_af01818d1c0f3fedbcf2f1c4072330c37} 
+dict find\+\_\+distance.\+Calib\+Window.\+\_\+last\+\_\+vals = \{\}\hspace{0.3cm}{\ttfamily [protected]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01460}{1460}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_calib_window_a96f60a1424413e575a7ddb78316c98e0}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!\_pending\_update@{\_pending\_update}}
+\index{\_pending\_update@{\_pending\_update}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{\_pending\_update}{\_pending\_update}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_a96f60a1424413e575a7ddb78316c98e0} 
+bool find\+\_\+distance.\+Calib\+Window.\+\_\+pending\+\_\+update = False\hspace{0.3cm}{\ttfamily [protected]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01461}{1461}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_calib_window_a70d15d027c5d1cc5a4d03ce46af7d908}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!active\_cam@{active\_cam}}
+\index{active\_cam@{active\_cam}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{active\_cam}{active\_cam}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_a70d15d027c5d1cc5a4d03ce46af7d908} 
+find\+\_\+distance.\+Calib\+Window.\+active\+\_\+cam = \textquotesingle{}Right\textquotesingle{}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01459}{1459}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_calib_window_afb15fc654ba9e8cb0555165a46a0f8df}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!open@{open}}
+\index{open@{open}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{open}{open}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_afb15fc654ba9e8cb0555165a46a0f8df} 
+bool find\+\_\+distance.\+Calib\+Window.\+open = False}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01458}{1458}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_calib_window_a60c502abfa9bdac95f6f89be5f8d763d}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!suppress\_auto@{suppress\_auto}}
+\index{suppress\_auto@{suppress\_auto}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{suppress\_auto}{suppress\_auto}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_a60c502abfa9bdac95f6f89be5f8d763d} 
+bool find\+\_\+distance.\+Calib\+Window.\+suppress\+\_\+auto = False}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01462}{1462}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+\Hypertarget{classfind__distance_1_1_calib_window_a9ca51c837ab83dcd32f1762d22d19c8f}\index{find\_distance.CalibWindow@{find\_distance.CalibWindow}!WIN@{WIN}}
+\index{WIN@{WIN}!find\_distance.CalibWindow@{find\_distance.CalibWindow}}
+\doxysubsubsection{\texorpdfstring{WIN}{WIN}}
+{\footnotesize\ttfamily \label{classfind__distance_1_1_calib_window_a9ca51c837ab83dcd32f1762d22d19c8f} 
+find\+\_\+distance.\+Calib\+Window.\+WIN = \textquotesingle{}Calibration\textquotesingle{}\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Definition at line \doxymbox{\hyperlink{find__distance_8py_source_l01455}{1455}} of file \doxymbox{\hyperlink{find__distance_8py_source}{find\+\_\+distance.\+py}}.
+
+
+
+The documentation for this class was generated from the following file:\+\begin{DoxyCompactItemize}
+\item 
+src/\+\+Dashboard/\+src/\+backend/\+\doxymbox{\hyperlink{find__distance_8py}{find\+\_\+distance.\+py}}\end{DoxyCompactItemize}

@@ -1,0 +1,208 @@
+\doxysection{Sensor\+App.\+py}
+\hypertarget{_sensor_app_8py_source}{}\label{_sensor_app_8py_source}\index{src/imu-\/gps/SensorApp.py@{src/imu-\/gps/SensorApp.py}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00003}00003\ \textcolor{keyword}{from}\ flask\ \textcolor{keyword}{import}\ Flask,\ Response}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00004}00004\ \textcolor{keyword}{import}\ json}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00005}00005\ \textcolor{keyword}{import}\ time}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00006}00006\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00007}00007\ \textcolor{comment}{\#\ Import\ your\ localization\ components}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00008}00008\ \textcolor{comment}{\#\ Localization\ libraries}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00009}00009\ \textcolor{keyword}{from}\ localization\ \textcolor{keyword}{import}\ (}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00010}00010\ \ \ \ \ IMU,\ GPS,\ EKF,}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00011}00011\ \ \ \ \ latlon\_toxy,}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00012}00012\ \ \ \ \ tilt\_compensated\_yaw,\ blend\_angle,}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00013}00013\ )}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00014}00014\ \textcolor{keyword}{import}\ numpy\ \textcolor{keyword}{as}\ np}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00015}00015\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00016}00016\ \textcolor{comment}{\#\ CSV\ libraries\ (for\ data\ collection\ and\ testing\ purposes)}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00017}00017\ \textcolor{keyword}{import}\ csv}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00018}00018\ \textcolor{keyword}{from}\ datetime\ \textcolor{keyword}{import}\ datetime}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00019}00019\ \textcolor{keyword}{import}\ os}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00020}00020\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00021}00021\ app\ =\ Flask(\_\_name\_\_)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00022}00022\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00023}00023\ \textcolor{keyword}{from}\ flask\_cors\ \textcolor{keyword}{import}\ CORS}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00024}00024\ CORS(app)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00025}00025\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00026}00026\ ekf\ =\ EKF()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00027}00027\ myIMU\ =\ IMU()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00028}00028\ myGPS\ =\ GPS()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00029}00029\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00030}00030\ \textcolor{keyword}{def\ }sensor\_stream():}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00031}00031\ \ \ \ \ \textcolor{comment}{\#\ For\ testing\ purposes}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00032}00032\ \ \ \ \ \textcolor{comment}{\#\ This\ creates\ a\ CSV\ file\ that\ will\ store\ the\ raw\ data\ and\ the\ EKF\ predictions\ for\ each\ loop\ iteration}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00033}00033\ \ \ \ \ timestamp\ =\ datetime.now().strftime(\textcolor{stringliteral}{'\%Y\%m\%d\_\%H\%M\%S'})}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00034}00034\ \ \ \ \ os.makedirs(\textcolor{stringliteral}{'output'},\ exist\_ok=\textcolor{keyword}{True})}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00035}00035\ \ \ \ \ path\ =\ f\textcolor{stringliteral}{"{}output/output\_\{timestamp\}.csv"{}}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00036}00036\ \ \ \ \ count\ =\ 1}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00037}00037\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00038}00038\ \ \ \ \ \textcolor{keyword}{with}\ open(path,\ \textcolor{stringliteral}{"{}w"{}},\ newline=\textcolor{stringliteral}{"{}"{}},\ encoding=\textcolor{stringliteral}{"{}utf-\/8"{}})\ \textcolor{keyword}{as}\ f:}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00039}00039\ \ \ \ \ \ \ \ \ cWriter\ =\ csv.writer(f)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00040}00040\ \ \ \ \ \ \ \ \ cWriter.writerow([\textcolor{stringliteral}{"{}id"{}},\ \textcolor{stringliteral}{"{}latitude"{}},\ \textcolor{stringliteral}{"{}longitude"{}},\ \textcolor{stringliteral}{"{}speed"{}},\ \textcolor{stringliteral}{"{}heading"{}},}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00041}00041\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}gps-\/lat"{}},\ \textcolor{stringliteral}{"{}gps-\/long"{}},\ \textcolor{stringliteral}{"{}dt"{}},\ \textcolor{stringliteral}{"{}imu-\/ax"{}},\ \textcolor{stringliteral}{"{}imu-\/ay"{}},\ \textcolor{stringliteral}{"{}imu-\/az"{}},}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00042}00042\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}imu-\/gx"{}},\ \textcolor{stringliteral}{"{}imu-\/gy"{}},\ \textcolor{stringliteral}{"{}imu-\/gz"{}},\ \textcolor{stringliteral}{"{}imu-\/mx"{}},\ \textcolor{stringliteral}{"{}imu-\/my"{}},\ \textcolor{stringliteral}{"{}imu-\/mz"{}},\ ])}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00043}00043\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00044}00044\ \ \ \ \ print(f\textcolor{stringliteral}{"{}Saving\ to:\ \{path\}"{}})}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00045}00045\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00046}00046\ \ \ \ \ yaw\_offset\ =\ 0.0\ \ \ \ \textcolor{comment}{\#\ Yaw\ =\ heading}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00047}00047\ \ \ \ \ yaw\_offset\_initialized\ =\ \textcolor{keyword}{False}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00048}00048\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00049}00049\ \ \ \ \ prev\_gps\_x\ =\ \textcolor{keywordtype}{None}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00050}00050\ \ \ \ \ prev\_gps\_y\ =\ \textcolor{keywordtype}{None}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00051}00051\ \ \ \ \ prev\_gps\_time\ =\ \textcolor{keywordtype}{None}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00052}00052\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00053}00053\ \ \ \ \ prev\_time\ =\ time.time()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00054}00054\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00055}00055\ \ \ \ \ \textcolor{comment}{\#\ Initialize\ GPS\ origin}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00056}00056\ \ \ \ \ \textcolor{comment}{\#\ Ensures\ that\ the\ GPS\ has\ locked\ onto\ a\ point\ before\ initializing\ the\ origin}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00057}00057\ \ \ \ \ \textcolor{comment}{\#\ Prevents\ false\ points\ like\ (0,0)}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00058}00058\ \ \ \ \ \textcolor{keywordflow}{while}\ \textcolor{keyword}{True}:}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00059}00059\ \ \ \ \ \ \ \ \ lat\_init,\ lon\_init\ =\ myGPS.get\_lat(),\ myGPS.get\_long()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00060}00060\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ lat\_init\ !=\ 0\ \textcolor{keywordflow}{and}\ lon\_init\ !=\ 0:}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00061}00061\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00062}00062\ \ \ \ \ \ \ \ \ time.sleep(0.1)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00063}00063\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00064}00064\ \ \ \ \ last\_gps\_time\ =\ 0}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00065}00065\ \ \ \ \ last\_mag\_time\ =\ 0}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00066}00066\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00067}00067\ \ \ \ \ \textcolor{comment}{\#\ accel\_measured\ =\ accel\_true\ +\ bias\ +\ noise}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00068}00068\ \ \ \ \ \textcolor{comment}{\#\ When\ car\ is\ not\ moving,\ accel\_true\ is\ 0\ and\ there\ is\ no\ noise...so\ that\ means\ any\ accel\_measured\ =\ bias}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00069}00069\ \ \ \ \ bias\_samples\ =\ []}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00070}00070\ \ \ \ \ \textcolor{keywordflow}{for}\ \_\ \textcolor{keywordflow}{in}\ range(100):}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00071}00071\ \ \ \ \ \ \ \ \ a\ =\ myIMU.get\_accel()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00072}00072\ \ \ \ \ \ \ \ \ bias\_samples.append(a[0])}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00073}00073\ \ \ \ \ \ \ \ \ time.sleep(0.01)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00074}00074\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00075}00075\ \ \ \ \ accel\_bias\_x\ =\ np.mean(bias\_samples)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00076}00076\ \ \ \ \ print(f\textcolor{stringliteral}{"{}Estimated\ accel\ bias\ x:\ \{accel\_bias\_x\}"{}})\ \ \ \ \textcolor{comment}{\#\ Car\ needs\ to\ remain\ still\ until\ this\ message\ pops\ up\ in\ terminal}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00077}00077\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00078}00078\ \ \ \ \ \textcolor{keywordflow}{while}\ \textcolor{keyword}{True}:}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00079}00079\ \ \ \ \ \ \ \ \ current\_time\ =\ time.time()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00080}00080\ \ \ \ \ \ \ \ \ dt\ =\ current\_time\ -\/\ prev\_time}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00081}00081\ \ \ \ \ \ \ \ \ prev\_time\ =\ current\_time}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00082}00082\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00083}00083\ \ \ \ \ \ \ \ \ dt\ =\ min(dt,\ 0.02)\ \ \textcolor{comment}{\#\ Cap\ dt\ to\ 20\ ms\ to\ prevent\ large\ jumps\ (dt\ clamp)}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00084}00084\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00085}00085\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ This\ is\ to\ ensure\ that\ consistent\ values\ are\ used\ for\ all\ updates\ within\ a\ single\ iteration\ of\ the\ loop}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00086}00086\ \ \ \ \ \ \ \ \ accel\ =\ myIMU.get\_accel()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00087}00087\ \ \ \ \ \ \ \ \ gyro\ =\ myIMU.get\_gyro()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00088}00088\ \ \ \ \ \ \ \ \ mag\ =\ myIMU.get\_magn()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00089}00089\ \ \ \ \ \ \ \ \ lat\ =\ myGPS.get\_lat()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00090}00090\ \ \ \ \ \ \ \ \ lon\ =\ myGPS.get\_long()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00091}00091\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00092}00092\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Project\ acceleration\ onto\ heading\ direction}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00093}00093\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ The\ logic\ here\ is\ that\ the\ car\ is\ either\ traveling\ forwards\ or\ backwards,\ even\ while\ turning\ it\ is\ still\ technically}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00094}00094\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ maintaining\ acceleration\ in\ the\ direction\ that\ the\ x-\/direction\ of\ the\ IMU\ is\ facing.\ The\ car\ does\ not\ travel\ sideways,}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00095}00095\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ so\ we\ do\ not\ need\ accel[1]}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00096}00096\ \ \ \ \ \ \ \ \ a\_forward\ =\ accel[0]\ -\/\ accel\_bias\_x}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00097}00097\ \ \ \ \ \ \ \ \ a\_forward\ =\ np.clip(a\_forward,\ -\/5.0,\ 5.0)\ \ \ \textcolor{comment}{\#\ Prevents\ bad\ numbers\ from\ hurting\ the\ EKF\ predictions}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00098}00098\ \ \ \ \ \ \ \ \ omega\ =\ gyro[2]}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00099}00099\ \ \ \ \ \ \ \ \ omega\ =\ np.clip(omega,\ -\/3.0,\ 3.0)\ \ \ \textcolor{comment}{\#\ Prevents\ bad\ numbers\ from\ hurting\ the\ EKF\ predictions}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00100}00100\ \ \ \ \ \ \ \ \ u\ =\ np.array([[a\_forward],\ [omega]])}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00101}00101\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00102}00102\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ EKF\ prediction}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00103}00103\ \ \ \ \ \ \ \ \ ekf.predict(u,\ dt)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00104}00104\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00105}00105\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ GPS\ update}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00106}00106\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ current\_time\ -\/\ last\_gps\_time\ >\ 0.2:\ \ \textcolor{comment}{\#\ GPS\ has\ an\ ODR\ of\ 5\ Hz}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00107}00107\ \ \ \ \ \ \ \ \ \ \ \ \ gps\_x,\ gps\_y\ =\ latlon\_toxy(lat,\ lon,\ lat\_init,\ lon\_init)\ \ \ \ \textcolor{comment}{\#\ Converts\ lat\ and\ long\ into\ Cartesian\ coordinates\ b/c\ IMU\ measures\ in\ meters\ and\ typical\ GPS\ coords\ are\ angular}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00108}00108\ \ \ \ \ \ \ \ \ \ \ \ \ z\_gps\ =\ np.array([gps\_x,\ gps\_y])}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00109}00109\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00110}00110\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ GPS\ gate\ to\ prevent\ bad\ numbers\ from\ hurting\ EKF\ predictions}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00111}00111\ \ \ \ \ \ \ \ \ \ \ \ \ dist\_to\_state\ =\ np.linalg.norm([}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00112}00112\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ gps\_x\ -\/\ ekf.x[0,\ 0],}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00113}00113\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ gps\_y\ -\/\ ekf.x[1,\ 0]}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00114}00114\ \ \ \ \ \ \ \ \ \ \ \ \ ])}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00115}00115\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00116}00116\ \ \ \ \ \ \ \ \ \ \ \ \ old\_R\ =\ ekf.R\_gps.copy()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00117}00117\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00118}00118\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ dist\_to\_state\ <\ 25.0:}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00119}00119\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ekf.update\_gps(np.array([gps\_x,\ gps\_y]))}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00120}00120\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{elif}\ dist\_to\_state\ <\ 100.0:}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00121}00121\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ekf.R\_gps\ =\ np.diag([400.0,\ 400.0])}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00122}00122\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ekf.update\_gps(z\_gps)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00123}00123\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ekf.R\_gps\ =\ old\_R}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00124}00124\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00125}00125\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Auto-\/calibrate\ yaw\ offset\ using\ GPS\ heading}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00126}00126\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ prev\_gps\_x\ \textcolor{keywordflow}{is}\ \textcolor{keywordflow}{not}\ \textcolor{keywordtype}{None}\ \textcolor{keywordflow}{and}\ prev\_gps\_time\ \textcolor{keywordflow}{is}\ \textcolor{keywordflow}{not}\ \textcolor{keywordtype}{None}:}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00127}00127\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dx\ =\ gps\_x\ -\/\ prev\_gps\_x}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00128}00128\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dy\ =\ gps\_y\ -\/\ prev\_gps\_y}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00129}00129\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dist\ =\ np.hypot(dx,\ dy)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00130}00130\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ gps\_dt\ =\ current\_time\ -\/\ prev\_gps\_time}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00131}00131\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00132}00132\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Only\ calibrates\ when\ GPS\ movement\ is\ big\ enough\ to\ give\ a\ meaningful\ heading,\ when\ the\ user\ is}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00133}00133\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ traveling\ roughly\ straight,\ and\ updates\ slowly\ so\ noise\ does\ not\ jerk\ the\ heading\ around}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00134}00134\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ gps\_dt\ >\ 0\ \textcolor{keywordflow}{and}\ dist\ >\ 3.0\ \textcolor{keywordflow}{and}\ abs(gyro[2])\ <\ 0.2:}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00135}00135\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ gps\_heading\ =\ np.arctan2(dy,\ dx)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00136}00136\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mag\_yaw\_raw\ =\ tilt\_compensated\_yaw(accel,\ mag)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00137}00137\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00138}00138\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ mag\_yaw\_raw\ \textcolor{keywordflow}{is}\ \textcolor{keywordflow}{not}\ \textcolor{keywordtype}{None}\ \textcolor{keywordflow}{and}\ np.isfinite(mag\_yaw\_raw):}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00139}00139\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ candidate\_offset\ =\ ekf.normalize\_angle(gps\_heading\ -\/\ mag\_yaw\_raw)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00140}00140\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00141}00141\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keywordflow}{not}\ yaw\_offset\_initialized:}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00142}00142\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ yaw\_offset\ =\ candidate\_offset}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00143}00143\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ yaw\_offset\_initialized\ =\ \textcolor{keyword}{True}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00144}00144\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}:}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00145}00145\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ yaw\_offset\ =\ blend\_angle(ekf,\ yaw\_offset,\ candidate\_offset,\ alpha=0.05)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00146}00146\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00147}00147\ \ \ \ \ \ \ \ \ \ \ \ \ prev\_gps\_x\ =\ gps\_x}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00148}00148\ \ \ \ \ \ \ \ \ \ \ \ \ prev\_gps\_y\ =\ gps\_y}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00149}00149\ \ \ \ \ \ \ \ \ \ \ \ \ prev\_gps\_time\ =\ current\_time}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00150}00150\ \ \ \ \ \ \ \ \ \ \ \ \ last\_gps\_time\ =\ current\_time}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00151}00151\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00152}00152\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Magnetometer\ update}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00153}00153\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ current\_time\ -\/\ last\_mag\_time\ >=\ 0.01:\ \ \ \ \textcolor{comment}{\#\ Magnetometer\ ODR\ is\ 100\ Hz}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00154}00154\ \ \ \ \ \ \ \ \ \ \ \ \ mag\_yaw\ =\ tilt\_compensated\_yaw(accel,\ mag)\ \ \textcolor{comment}{\#\ THIS\ IS\ IN\ RADIANS}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00155}00155\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ mag\_yaw\ \textcolor{keywordflow}{is}\ \textcolor{keywordflow}{not}\ \textcolor{keywordtype}{None}:\ \textcolor{comment}{\#\ Checks\ for\ invalid\ input}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00156}00156\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mag\_yaw\ =\ ekf.normalize\_angle(mag\_yaw\ +\ np.pi\ +\ yaw\_offset)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00157}00157\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ekf.update\_yaw(mag\_yaw)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00158}00158\ \ \ \ \ \ \ \ \ \ \ \ \ last\_mag\_time\ =\ current\_time}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00159}00159\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00160}00160\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ velocity\ clamp,\ essentially\ if\ the\ filter\ believes\ the\ user\ is\ barely\ moving,\ it\ forces\ speed\ down\ to\ 0}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00161}00161\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ abs(ekf.x[2,\ 0])\ <\ 0.02:}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00162}00162\ \ \ \ \ \ \ \ \ \ \ \ \ ekf.x[2,\ 0]\ =\ 0}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00163}00163\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00164}00164\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Extract\ state}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00165}00165\ \ \ \ \ \ \ \ \ x,\ y,\ v,\ mag\_yaw\ =\ ekf.x.flatten()}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00166}00166\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ print(f"{}x=\{x:.2f\},\ y=\{y:.2f\},\ v=\{v:.2f\},\ mag\_yaw=\{np.degrees(mag\_yaw):.1f\}\ rad"{})}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00167}00167\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#R\ =\ 6378137\ \ \#\ Earth\ radius}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00168}00168\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#lat\_est\ =\ lat\_init\ +\ (y\ /\ R)\ *\ (180\ /\ np.pi)}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00169}00169\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#lon\_est\ =\ lon\_init\ +\ (x\ /\ (R\ *\ np.cos(np.radians(lat\_init))))\ *\ (180\ /\ np.pi)}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00170}00170\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00171}00171\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ Saves\ state\ in\ testing\ output\ CSV\ file}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00172}00172\ \ \ \ \ \ \ \ \ \textcolor{keyword}{with}\ open(path,\ \textcolor{stringliteral}{"{}a"{}},\ newline=\textcolor{stringliteral}{"{}"{}},\ encoding=\textcolor{stringliteral}{"{}utf-\/8"{}})\ \textcolor{keyword}{as}\ f:}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00173}00173\ \ \ \ \ \ \ \ \ \ \ \ \ cWriter\ =\ csv.writer(f)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00174}00174\ \ \ \ \ \ \ \ \ \ \ \ \ cWriter.writerow([count,\ x,\ y,\ v,\ mag\_yaw,\ lat,\ lon,\ dt,}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00175}00175\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ accel[0],\ accel[1],\ accel[2],}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00176}00176\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ gyro[0],\ gyro[1],\ gyro[2],}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00177}00177\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mag[0],\ mag[1],\ mag[2]])}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00178}00178\ \ \ \ \ \ \ \ \ \ \ \ \ count\ +=\ 1}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00179}00179\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00180}00180\ \ \ \ \ \ \ \ \ data\ =\ \{}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00181}00181\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}x"{}}:\ float(x),}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00182}00182\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}y"{}}:\ float(y),}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00183}00183\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}v"{}}:\ float(v),}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00184}00184\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}mag\_yaw"{}}:\ float(mag\_yaw),}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00185}00185\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}lat"{}}:\ float(lat),}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00186}00186\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}lon"{}}:\ float(lon)}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00187}00187\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00188}00188\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00189}00189\ \ \ \ \ \ \ \ \ \textcolor{comment}{\#\ SSE\ format}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00190}00190\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{yield}\ f\textcolor{stringliteral}{"{}data:\ \{json.dumps(data)\}\(\backslash\)n\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00191}00191\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00192}00192\ \ \ \ \ \ \ \ \ time.sleep(0.01)\ \ \textcolor{comment}{\#\ Sleep\ to\ prevent\ busy\ loop,\ adjusted\ to\ 0.01\ to\ match\ the\ fastest\ ODR\ (magnetometer\ ODR\ 100Hz)}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00193}00193\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00194}00194\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00195}00195\ \textcolor{preprocessor}{@app.route('/stream')}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00196}00196\ \textcolor{keyword}{def\ }stream():}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00197}00197\ \ \ \ \ \textcolor{keywordflow}{return}\ Response(sensor\_stream(),\ mimetype=\textcolor{stringliteral}{'text/event-\/stream'},}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00198}00198\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ headers=\{\textcolor{stringliteral}{"{}Cache-\/Control"{}}:\ \textcolor{stringliteral}{"{}no-\/cache"{}},\ \textcolor{stringliteral}{"{}X-\/Accel-\/Buffering"{}}:\ \textcolor{stringliteral}{"{}no"{}}\})\ \ \textcolor{comment}{\#\ important\ for\ streaming}}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00199}00199\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00200}00200\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00201}00201\ }
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00202}00202\ \textcolor{keywordflow}{if}\ \_\_name\_\_\ ==\ \textcolor{stringliteral}{"{}\_\_main\_\_"{}}:}
+\DoxyCodeLine{\Hypertarget{_sensor_app_8py_source_l00203}00203\ \ \ \ \ app.run(debug=\textcolor{keyword}{True},\ threaded=\textcolor{keyword}{True},\ use\_reloader=\textcolor{keyword}{False})}
+
+\end{DoxyCode}

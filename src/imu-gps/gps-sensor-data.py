@@ -1,22 +1,37 @@
-'''
-Set up:
-enable serial port on jetson
-find what serial port points to:
-command: ls -l /dev/serial0
-(rasp points to ttyS0)
-'''
+## @file gps-sensor-data.py
+#  @breif Reads NMEA GPS sentences from a UART serial port and prints parsed fix data.
+#
+#
+#  Opens a serial connection to a GPS module wired to the jetson.
+#  Waits for GGA sentences, parses them with pynmea2 and prints timestamp, latitude, longitude, altitude, and satelite count.
+#
+#  @section setup Setupo
+#  1.   Enable serial port on the jetson:
+#       @code
+#       sudo systemctl disable nvgetty
+#       sudo systemctl stop nvgetty
+#       @endcode
+#  2.   Find which devide node the serial port maps to:
+#       @code
+#       ls -l /dev/serial0
+#  3.   Install dependencies
+#       @code
+#       pip install pyserial pynmea2
+#       @endcode
+# 
+#
 
-#pip install pynmea2
-#pip install pyserial
+# pip install pyserial
 
 import serial
 import time
 import pynmea2
 
-# Configure the serial port
-# Replace '/dev/ttyS0' with the correct serial device name for your Pi
-# (e.g., '/dev/ttyUSB0' for a USB-to-serial adapter)
-# Ensure the baudrate matches the device you are communicating with.
+## @breif Open and configure the serial connection to the GPS module.
+#   Configure the serial port
+#   Replace '/dev/ttyS0' with the correct serial device name for your Pi
+#   (e.g., '/dev/ttyUSB0' for a USB-to-serial adapter)
+#   Ensure the baudrate matches the device you are communicating with.
 ser = serial.Serial(
     port='/dev/ttyTHS1',  # Adjust this for your specific setup
     baudrate=9600,

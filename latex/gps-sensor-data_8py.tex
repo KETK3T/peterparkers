@@ -1,0 +1,95 @@
+\doxysection{src/\+imu-\/gps/\+gps-\/sensor-\/data.py File Reference}
+\hypertarget{gps-sensor-data_8py}{}\label{gps-sensor-data_8py}\index{src/imu-\/gps/gps-\/sensor-\/data.py@{src/imu-\/gps/gps-\/sensor-\/data.py}}
+
+
+@breif Reads NMEA GPS sentences from a UART serial port and prints parsed fix data.  
+
+
+\doxysubsubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{gps-sensor-data_8py_aaee63c4cb897c8aa4f1398fbad523e1e}{gps-\/sensor-\/data.\+ser}}
+\begin{DoxyCompactList}\small\item\em @breif Open and configure the serial connection to the GPS module. \end{DoxyCompactList}\item 
+\doxymbox{\hyperlink{gps-sensor-data_8py_a74a9e2c099d3dd8e724a961674aeb9c9}{gps-\/sensor-\/data.\+data}} = ser.\+readline().decode().strip()
+\item 
+\doxymbox{\hyperlink{gps-sensor-data_8py_a116d008037c638e11579b97e8b71d40e}{gps-\/sensor-\/data.\+msg}} = pynmea2.\+parse(data)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+@breif Reads NMEA GPS sentences from a UART serial port and prints parsed fix data. 
+
+Opens a serial connection to a GPS module wired to the jetson. Waits for GGA sentences, parses them with pynmea2 and prints timestamp, latitude, longitude, altitude, and satelite count.\hypertarget{gps-sensor-data_8py_setup}{}\doxysubsection{\texorpdfstring{Setupo}{Setupo}}\label{gps-sensor-data_8py_setup}
+
+\begin{DoxyEnumerate}
+\item Enable serial port on the jetson:\+ 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ systemctl\ disable\ nvgetty}
+\DoxyCodeLine{sudo\ systemctl\ stop\ nvgetty}
+
+\end{DoxyCode}
+
+\item Find which devide node the serial port maps to:\+ 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\ \ \ \ \ ls\ -\/l\ /dev/serial0}
+\DoxyCodeLine{3.\ \ \ Install\ dependencies}
+\DoxyCodeLine{\ \ \ \ \ \textcolor{preprocessor}{@code}}
+\DoxyCodeLine{\ \ \ \ \ pip\ install\ pyserial\ pynmea2}
+
+\end{DoxyCode}
+ 
+\end{DoxyEnumerate}
+
+Definition in file \doxymbox{\hyperlink{gps-sensor-data_8py_source}{gps-\/sensor-\/data.\+py}}.
+
+
+
+\label{doc-var-members}
+\Hypertarget{gps-sensor-data_8py_doc-var-members}
+\doxysubsection{Variable Documentation}
+\Hypertarget{gps-sensor-data_8py_a74a9e2c099d3dd8e724a961674aeb9c9}\index{gps-\/sensor-\/data.py@{gps-\/sensor-\/data.py}!data@{data}}
+\index{data@{data}!gps-\/sensor-\/data.py@{gps-\/sensor-\/data.py}}
+\doxysubsubsection{\texorpdfstring{data}{data}}
+{\footnotesize\ttfamily \label{gps-sensor-data_8py_a74a9e2c099d3dd8e724a961674aeb9c9} 
+gps-\/sensor-\/data.\+data = ser.\+readline().decode().strip()}
+
+
+
+Definition at line \doxymbox{\hyperlink{gps-sensor-data_8py_source_l00053}{53}} of file \doxymbox{\hyperlink{gps-sensor-data_8py_source}{gps-\/sensor-\/data.\+py}}.
+
+\Hypertarget{gps-sensor-data_8py_a116d008037c638e11579b97e8b71d40e}\index{gps-\/sensor-\/data.py@{gps-\/sensor-\/data.py}!msg@{msg}}
+\index{msg@{msg}!gps-\/sensor-\/data.py@{gps-\/sensor-\/data.py}}
+\doxysubsubsection{\texorpdfstring{msg}{msg}}
+{\footnotesize\ttfamily \label{gps-sensor-data_8py_a116d008037c638e11579b97e8b71d40e} 
+gps-\/sensor-\/data.\+msg = pynmea2.\+parse(data)}
+
+
+
+Definition at line \doxymbox{\hyperlink{gps-sensor-data_8py_source_l00058}{58}} of file \doxymbox{\hyperlink{gps-sensor-data_8py_source}{gps-\/sensor-\/data.\+py}}.
+
+\Hypertarget{gps-sensor-data_8py_aaee63c4cb897c8aa4f1398fbad523e1e}\index{gps-\/sensor-\/data.py@{gps-\/sensor-\/data.py}!ser@{ser}}
+\index{ser@{ser}!gps-\/sensor-\/data.py@{gps-\/sensor-\/data.py}}
+\doxysubsubsection{\texorpdfstring{ser}{ser}}
+{\footnotesize\ttfamily \label{gps-sensor-data_8py_aaee63c4cb897c8aa4f1398fbad523e1e} 
+gps-\/sensor-\/data.\+ser}
+
+{\bfseries Initial value:\+}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ =\ \ serial.Serial(}
+\DoxyCodeLine{00002\ \ \ \ \ port=\textcolor{stringliteral}{'/dev/ttyTHS1'},\ \ \textcolor{comment}{\#\ Adjust\ this\ for\ your\ specific\ setup}}
+\DoxyCodeLine{00003\ \ \ \ \ baudrate=9600,}
+\DoxyCodeLine{00004\ \ \ \ \ parity=serial.PARITY\_NONE,}
+\DoxyCodeLine{00005\ \ \ \ \ stopbits=serial.STOPBITS\_ONE,}
+\DoxyCodeLine{00006\ \ \ \ \ bytesize=serial.EIGHTBITS,}
+\DoxyCodeLine{00007\ \ \ \ \ timeout=1\ \ \textcolor{comment}{\#\ Timeout\ in\ seconds}}
+\DoxyCodeLine{00008\ )}
+
+\end{DoxyCode}
+
+
+@breif Open and configure the serial connection to the GPS module. 
+
+Configure the serial port Replace \textquotesingle{}/\+dev/\+tty\+S0\textquotesingle{} with the correct serial device name for your Pi (e.\+g., \textquotesingle{}/\+dev/\+tty\+USB0\textquotesingle{} for a USB-\/to-\/serial adapter) Ensure the baudrate matches the device you are communicating with. 
+
+Definition at line \doxymbox{\hyperlink{gps-sensor-data_8py_source_l00035}{35}} of file \doxymbox{\hyperlink{gps-sensor-data_8py_source}{gps-\/sensor-\/data.\+py}}.
+
