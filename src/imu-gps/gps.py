@@ -4,7 +4,7 @@ import pynmea2
 import threading
 
 class GPS:
-    def __init__(self, rate_hz=5):
+    def __init__(self):
         self.ser = serial.Serial(
             port='/dev/ttyTHS1',  # Adjust this for your specific setup
             baudrate=9600,
@@ -14,12 +14,15 @@ class GPS:
             timeout=1  # Timeout in seconds
         )
 
-        self.rate = rate_hz
+        #self.rate = rate_hz # rate_hz=5 in init header
         self.running = True
 
         self.latitude = 0
         self.longitude = 0
         self.altitude = 0 #sometimes returns None
+
+        # new data flag
+        self.new_data = False
 
         # start background thread
         self.thread = threading.Thread(target=self.update_loop, daemon=True)
@@ -27,7 +30,7 @@ class GPS:
 
     def __str__(self):
         def _fmt(v):
-            return f"{v:}" if isinstance(v, (int, float)) else "N/A"
+            return f"{v:.3f}" if isinstance(v, (int, float)) else "N/A"
 
         return (
             f"Latitude: {_fmt(self.latitude)}\n"
@@ -37,37 +40,39 @@ class GPS:
 
     def update_loop(self):
         print("Serial port opened. Waiting for data...")
-        period = 1 / self.rate
+        #period = 1 / self.rate
+        try:
+            while self.running:
+                if self.ser.in_waiting > 0:
+                    # Read data from the serial port
+                    # ser.readline() reads until a newline character is encountered
+                    # ser.read(num_bytes) reads a specified number of bytes
+                    data = self.ser.readline().decode().strip()  # Decode and remove whitespace
+                    # 'utf-8'
+                    if data:
+                        if data.find('GGA') > 0:
+                            try:
+                                msg = pynmea2.parse(data)
+                                '''
+                                print(msg.timestamp, 'Lat:', round(msg.latitude, 6), 'Lon:', round(msg.longitude, 6),
+                                      'Alt:', msg.altitude, 'Sats:', msg.num_sats)
+                                '''
+                                # print(f"Received: {data}")
 
-        while self.running:
-            if self.ser.in_waiting > 0:
-                # Read data from the serial port
-                # ser.readline() reads until a newline character is encountered
-                # ser.read(num_bytes) reads a specified number of bytes
-                data = self.ser.readline().decode().strip()  # Decode and remove whitespace
-                # 'utf-8'
+                                self.latitude = msg.latitude
+                                self.longitude = msg.longitude
+                                self.altitude = msg.altitude
+                                self.new_data = True
 
-                if data.find('GGA') > 0:
-                    try:
-                        msg = pynmea2.parse(data)
-                        '''
-                        print(msg.timestamp, 'Lat:', round(msg.latitude, 6), 'Lon:', round(msg.longitude, 6),
-                              'Alt:', msg.altitude, 'Sats:', msg.num_sats)
-                        '''
-                        # print(f"Received: {data}")
+                            except Exception as e:
+                                print(e)
 
-                        self.latitude = msg.latitude
-                        self.longitude = msg.longitude
-                        self.altitude = msg.altitude
+                    else:
+                        print("No data recieved")
+                #time.sleep(period)  # Small delay to prevent busy-waiting
 
-                    except Exception as e:
-                        print(e)
-
-
-
-                time.sleep(period)  # Small delay to prevent busy-waiting
-
-
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
     def get_lat(self):
         return self.latitude
@@ -82,3 +87,8 @@ class GPS:
         self.running = False
         self.ser.close()
         self.thread.join()
+
+    def get_data(self):
+        self.new_data = False
+        return self.latitude, self.longitude
+

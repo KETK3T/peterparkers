@@ -1,0 +1,9 @@
+node_modules/
+/.idea/
+/models/*
+__pycache__/
+*.csv
+*.mp4
+*.mov
+*.avi
+package-lock.json

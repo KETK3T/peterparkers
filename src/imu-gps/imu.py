@@ -1,10 +1,6 @@
 import threading
-import time
 import board
 import adafruit_icm20x
-
-
-#not sure if rate_hz and application refresh rate should be the same
 
 #if need ax,ay,az (or other measurements)=> 
 #myimu = IMU()
@@ -13,16 +9,19 @@ import adafruit_icm20x
 #once application closes make sure run myimu.stop() for clean stop
 
 class IMU:
-    def __init__(self, rate_hz=60):
+    def __init__(self):
         
         i2c = board.I2C()
         self.sensor = adafruit_icm20x.ICM20948(i2c)
-        self.rate = rate_hz
+        #self.rate = rate_hz
         self.running = True
         
         self.accel = self.sensor.acceleration# m/s^2
         self.gyro =  self.sensor.gyro #rad/s
         self.magnetic = self.sensor.magnetic # uT
+
+        # new data flag
+        self.new_data = False
 
         # start background thread
         self.thread = threading.Thread(target=self.update_loop, daemon=True)
@@ -36,12 +35,13 @@ class IMU:
         )
 
     def update_loop(self):
-        period = 1 / self.rate
+        #period = 1 / self.rate
         while self.running:
             self.accel = self.sensor.acceleration
             self.gyro = self.sensor.gyro
             self.magnetic = self.sensor.magnetic
-            time.sleep(period)
+            self.new_data = True
+            #time.sleep(period)
 
     def get_accel(self):
         return self.accel
@@ -50,6 +50,7 @@ class IMU:
         return self.gyro
 
     def get_magn(self):
+        self.new_data = False
         return self.magnetic
 
     def stop(self):

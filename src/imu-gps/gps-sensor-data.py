@@ -35,7 +35,7 @@ try:
             # Read data from the serial port
             # ser.readline() reads until a newline character is encountered
             # ser.read(num_bytes) reads a specified number of bytes
-            data = ser.readline().decode('ascii',errors='ignore').strip() # Decode and remove whitespace
+            data = ser.readline().decode().strip() # Decode and remove whitespace
             #'utf-8'
             if data:
                 if data.find('GGA') > 0:

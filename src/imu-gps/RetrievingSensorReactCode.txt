@@ -1,0 +1,36 @@
+import { useEffect, useState } from "react";
+
+function SensorFeed() {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    const eventSource = new EventSource("http://localhost:5000/stream");
+
+    eventSource.onmessage = (event) => {
+      const parsed = JSON.parse(event.data);
+      setData(parsed);
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
+  return (
+    <div>
+      <h2>Live Car Data</h2>
+      {data && (
+        <div>
+          <p>X: {data.x}</p>
+          <p>Y: {data.y}</p>
+          <p>Velocity: {data.v}</p>
+          <p>Yaw: {data.mag_yaw}</p>
+          <p>Lat: {data.lat}</p>
+          <p>Lon: {data.lon}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default SensorFeed;

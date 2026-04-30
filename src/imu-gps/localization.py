@@ -1,62 +1,53 @@
-import time
 import numpy as np
-from ekf import EKF
 from imu import IMU
 from gps import GPS
-
-ekf = EKF()
-prev_time = time.time()
-myIMU = IMU()
-myGPS = GPS()
-
-while True:
-    time.sleep(0.5)
-    # IMU readings
-    ax, ay, az = myIMU.accel
-    gyro_x, gyro_y, gyro_z = myIMU.gyro
-
-    # Compute dt using timestamps
-    now = time.time()
-    dt = now - prev_time
-    prev_time = now
-
-    ### Prediction step -- propagates uncertainty forward in time
-    # State prediction
-    ekf.x = ekf.predict_f(ekf.x, dt, ax, ay, gyro_z)
-    # Finds the jacobian of the motion model to determine F matrix
-    F = ekf.F_jacobian(ekf.x, dt, ax, ay)
-    # Covariance prediction
-    ekf.P = F @ ekf.P @ F.T + ekf.Q
-
-    ### Update step
-    # currently the loop is always running, but the GPS has a refresh rate of ~5Hz, need to research way to only perform
-    # update step when GPS receives new data
-    gps_x = myGPS.get_lat()
-    gps_y = myGPS.get_long()
-
-    # Finds H matrix by calculating the Jacobian of the measurement model
-    H = ekf.H_jacobian(ekf.x)
-    # Grabs estimate from state vector
-    z_pred = ekf.H(ekf.x)
-    # Compute the innovation (measurement residual)
-    y = np.array([gps_x, gps_y]) - z_pred
-
-    # Innovation covariance
-    S = H @ ekf.P @ H.T + ekf.R
-    # Kalman gain
-    K = ekf.P @ H.T @ np.linalg.inv(S)
-
-    # Updates the state estimate
-    ekf.x = ekf.x + K @ y
-    # Updates covariance
-    ekf.P = (np.eye(5) - K @ H) @ ekf.P
-
-    # Prints state vector
-    # position in x and y directions
-    # velocity in x and y directions
-    # heading in radians
-    print(ekf)
-    ekf.load()
+from test_ekf import EKF
 
 
+def blend_angle(ekf, old_angle, new_angle, alpha):
+    diff = ekf.normalize_angle(new_angle - old_angle)
+    return ekf.normalize_angle(old_angle + alpha * diff)
 
+# This function converts latitude and longitude to local Cartesian coordinates (x, y) in meters relative to an origin point (lat0, lon0).
+def latlon_toxy(lat, lon, lat0, lon0):  # lat0 and lon0 are the initial starting GPS coordinates
+    R = 6378137  # Earth radius in meters
+
+    lat = np.radians(lat)
+    lon = np.radians(lon)
+
+    lat0 = np.radians(lat0)
+    lon0 = np.radians(lon0)
+
+    x = (lon - lon0) * R * np.cos(lat0)
+    y = (lat - lat0) * R
+
+    return x, y
+
+# This function calculates the yaw (heading) of the car. It uses pitch and roll to compensate for possible tilted angle of the IMU.
+def tilt_compensated_yaw(accel, mag):
+    ax, ay, az = accel
+    mx, my, mz = mag
+
+    # Normalize accelerometer
+    norm_a = np.sqrt(ax**2 + ay**2 + az**2)
+    norm_m = np.sqrt(mx**2 + my**2 + mz**2)
+
+    if norm_a < 1e-6 or norm_m < 1e-6:
+        return None
+
+    ax /= norm_a
+    ay /= norm_a
+    az /= norm_a
+
+    # Pitch and roll
+    pitch = np.arcsin(-ax)  # rotation around y-axis
+    roll = np.arctan2(ay, az) # rotation around x-axis
+
+    # Tilt compensation for magnetometer
+    mx_comp = mx * np.cos(pitch) + mz * np.sin(pitch)
+    my_comp = mx * np.sin(roll) * np.sin(pitch) + my * np.cos(roll) - mz * np.sin(roll) * np.cos(pitch)
+
+    # Yaw calculation
+    yaw = np.arctan2(-my_comp, mx_comp)  # rotation around z-axis, negative sign depends on sensor frame
+
+    return yaw
