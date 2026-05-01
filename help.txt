@@ -1,79 +1,44 @@
-mkdir [directoryname] - creates folder/directory
-touch [filename] - creates file
-python -m venv ~/Projects/icm20948-setup/venv
- - creates a folder called venv and makes virtual environment
-source venv/bin/activate
-- activates the virtual environment
-deactivate - exits virtual environment
-requirements.txt:
-- activate venv
-- pip freeze > requirements.txt
-- pip install -r requirements.txt
-adafruit download:
-- pip install adafruit-blinka
-- pip install adafruit-circuitpython-icm20x
+To create a new virtual environment:
+python -m venv ~/[insert path here]/[virtual environment name]
 
-Other library needed to install:
-- pip install RPi.GPIO
+To activate an environment:
+source ~/[insert path here]/[virtual environment name]/bin/activate
 
-To detect i2c:
-- i2cdetect -y 1
+You will need to install Node.js and the npm CLI. More instructions on how to do so at this link:
+docs.npmjs.com/downloading-and-installing-node-js-and-npm
 
+To install requirements (assuming virtual environment has been activated and Node.js + npm CLI have been installed):
+pip install -r requirements.txt
+npm install leaflet react-leaflet
+npm install react-leaflet-cluster
+npm install react-dom
 
-for jetson detection
-- sudo i2cdetect -y -r 7
-- wires connected to gpio pin 3 and 5
+To detect I2C devices on the Jetson:
+i2cdetect -y -r [bus_number]
 
+40 PIN header on Jetson:
+sudo i2cdetect -y -r 7
+Wires are connected to GPIO pins 3 and 5
+
+System monitoring tool to check resources on Jetson:
 jtop
-- check resources on the jetson
 
-to activate the env
-- source ~/parker-env/bin/activate
+DO NOT USE SUDO UPGRADE
 
-git commit -m "(context)"
-git push
-username and token (git-token.txt)
-
-to switch to branch
-- git switch "name of branch"
-- git checkout "name of branch"
-
-to create new branch 
-- got checkout -b "name of branch"
-
-DO NOT USE SUDO UPGRADE 
-
-to activate max gpu power
-- sudo jetson_clocks
+To activate max GPU power
+sudo jetson_clocks
 
 Setting up GPS:
 
-pip list
-- to show whats downloaded
-
-pip install pyserial
-pip install pynmea2
-
-enable serial port
-find what serial port points to:
-command: ls -l /dev/serial0
-(rasp points to ttyS0)
+Enable serial port
+Find what serial port points to:
+ls -l /dev/serial0
 
 Jetson config command:
 sudo /opt/nvidia/jetson-io/jetson-io.py
 
-jetson serial port for uart1: ttyTHS1
-if starting completely new, will need to adjust permissions
-
-Run code from parker-repo
-python3 src/imu-gps/test.py
-
-ctrl C
-
-How to run dashboard
-run flask app first 
-npm run dev
-click local server
+Jetson serial port for uart1: ttyTHS1
+If starting completely new, will need to adjust permissions
 
 Testing model and 3 cams:
 python ./src/Dashboard/src/backend/find_distance.py -r #Allows you to record
@@ -92,7 +57,6 @@ sensor_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../
 sys.path.append(sensor_path)
 
 How to run application:
-
 Backend:
 --- This needs to be set up before frontend! ---
 Set up linux backend terminal
@@ -108,4 +72,3 @@ while in peterparkers folder run commands ->
 cd src/Dashboard
 npm run dev
 click local server -> Firefox
-
